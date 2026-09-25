@@ -5,9 +5,6 @@ using MahoSoft.Entidades;
 
 namespace MahoSoft.Negocio.Compras;
 
-/// <summary>An uploaded file as it arrives from the browser.</summary>
-public record ArchivoEntrante(Stream Contenido, string Nombre, long Tamano);
-
 public interface ICompraServicio
 {
     Task<List<CompraDto>> ListarAsync(CancellationToken ct = default);
@@ -42,7 +39,6 @@ public class CompraServicio(
     /// <summary>Colombia is UTC-5 all year; invoice dates and consecutive years are in local time.</summary>
     public static readonly TimeSpan Colombia = TimeSpan.FromHours(-5);
 
-    public const long DocumentoTamanoMaximo = 10 * 1024 * 1024;
     private const string NoExiste = "La compra no existe";
 
     public async Task<List<CompraDto>> ListarAsync(CancellationToken ct = default) =>
@@ -59,19 +55,19 @@ public class CompraServicio(
     )
     {
         var compra = await ArmarAsync(req, usuarioId, ct);
-        var archivo = documento is null ? null : await LeerDocumentoAsync(documento, ct);
+        var archivo = documento is null ? null : await Documentos.LeerAsync(documento, "El documento", ct);
 
         // The file goes to disk first; if the database part fails, it is removed again
         string? ruta = null;
         if (archivo is not null)
         {
-            ruta = await documentos.GuardarAsync(new MemoryStream(archivo.Value.Bytes), "facturas", archivo.Value.Extension, ct);
+            ruta = await documentos.GuardarAsync(new MemoryStream(archivo.Bytes), "facturas", archivo.Extension, ct);
             compra.Documento = new Archivo
             {
                 Id = Guid.NewGuid(),
                 Nombre = Path.GetFileName(documento!.Nombre),
-                TipoMime = archivo.Value.TipoMime,
-                Tamano = archivo.Value.Bytes.Length,
+                TipoMime = archivo.TipoMime,
+                Tamano = archivo.Bytes.Length,
                 Almacen = AlmacenArchivo.Local,
                 Ubicacion = ruta,
                 SubidoEn = DateTimeOffset.UtcNow,
@@ -233,21 +229,27 @@ public class CompraServicio(
             i.CostoUnitario = Pesos(SinIva(i.PrecioUnitario) * proporcion);
     }
 
-    /// <summary>Adds each item's units to stock (entrada movement) and updates the product's cost.</summary>
+    /// <summary>
+    /// Adds each item's units to stock (entrada movement) and updates the product's cost. Stock is added in the
+    /// database itself (Stock = Stock + n), so a sale or another purchase at the same moment isn't lost.
+    /// </summary>
     private async Task SumarAlInventarioAsync(Compra compra, int usuarioId, CancellationToken ct)
     {
         var ahora = DateTimeOffset.UtcNow;
+        var tallasNuevas = new Dictionary<(int, int), ProductoTalla>();
         foreach (var item in compra.Items)
         {
             var producto = item.Producto;
-            var existencia = producto.Tallas.SingleOrDefault(t => t.TallaId == item.Talla.Id);
-            if (existencia is null)
+            var clave = (producto.Id, item.Talla.Id);
+            if (tallasNuevas.TryGetValue(clave, out var nueva))
+                nueva.Stock += item.Cantidad;
+            else if (!await productos.CambiarStockAsync(producto.Id, item.Talla.Id, item.Cantidad, ct))
             {
                 // The product didn't come in this size yet: now it does
-                existencia = new ProductoTalla { Talla = item.Talla };
-                producto.Tallas.Add(existencia);
+                nueva = new ProductoTalla { Talla = item.Talla, Stock = item.Cantidad };
+                producto.Tallas.Add(nueva);
+                tallasNuevas[clave] = nueva;
             }
-            existencia.Stock += item.Cantidad;
             productos.AgregarMovimiento(
                 new MovimientoInventario
                 {
@@ -269,41 +271,6 @@ public class CompraServicio(
             if (!await compras.HayCompraPosteriorAsync(grupo.Key, compra.FechaComprobante, ct))
                 grupo.Last().Producto.CostoActual = grupo.Last().CostoUnitario;
         }
-    }
-
-    /// <summary>Reads the upload and checks, by its content, that it is a PDF or an image of at most 10 MB.</summary>
-    private static async Task<(byte[] Bytes, string TipoMime, string Extension)?> LeerDocumentoAsync(
-        ArchivoEntrante documento,
-        CancellationToken ct
-    )
-    {
-        if (documento.Tamano == 0)
-            throw new ValidacionException("El documento está vacío");
-        if (documento.Tamano > DocumentoTamanoMaximo)
-            throw new ValidacionException("El documento no puede pesar más de 10 MB");
-
-        using var memoria = new MemoryStream();
-        await documento.Contenido.CopyToAsync(memoria, ct);
-        var bytes = memoria.ToArray();
-        var tipo =
-            DetectarTipo(bytes)
-            ?? throw new ValidacionException("El documento debe ser un PDF o una imagen (JPG, PNG o WebP)");
-        return (bytes, tipo.Mime, tipo.Extension);
-    }
-
-    private static (string Mime, string Extension)? DetectarTipo(byte[] b)
-    {
-        bool Empieza(params byte[] firma) => b.Length >= firma.Length && b.AsSpan(0, firma.Length).SequenceEqual(firma);
-
-        if (Empieza("%PDF-"u8.ToArray()))
-            return ("application/pdf", ".pdf");
-        if (Empieza(0xFF, 0xD8, 0xFF))
-            return ("image/jpeg", ".jpg");
-        if (Empieza(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A))
-            return ("image/png", ".png");
-        if (b.Length >= 12 && Empieza("RIFF"u8.ToArray()) && b.AsSpan(8, 4).SequenceEqual("WEBP"u8))
-            return ("image/webp", ".webp");
-        return null;
     }
 
     private static decimal Pesos(decimal valor) => Math.Round(valor, 0, MidpointRounding.AwayFromZero);

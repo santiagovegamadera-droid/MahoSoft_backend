@@ -63,8 +63,16 @@ public class ProductoServicio(
     {
         var producto = await productos.ObtenerParaEditarAsync(id, ct) ?? throw new NoEncontradoException(NoExiste);
         var imagenAnterior = producto.Imagen;
-        await AplicarAsync(producto, req, usuarioId, ct);
-        await unidad.GuardarCambiosAsync(ct);
+        // Stock changes run in the database right away, so they commit together with the rest or not at all
+        await unidad.EnTransaccionAsync(
+            async () =>
+            {
+                await AplicarAsync(producto, req, usuarioId, ct);
+                await unidad.GuardarCambiosAsync(ct);
+                return producto.Id;
+            },
+            ct
+        );
 
         if (imagenAnterior is not null && imagenAnterior.Id != producto.ImagenId)
             await EliminarImagenAsync(imagenAnterior, id, ct);
@@ -179,7 +187,9 @@ public class ProductoServicio(
 
     /// <summary>
     /// Makes the product's sizes and units match <paramref name="stock"/>. Each change of units is stored as an
-    /// adjustment movement, so the stock can always be explained; a size with units can't be dropped.
+    /// adjustment movement, so the stock can always be explained; a size with units can't be dropped. On sizes
+    /// already saved the difference is added in the database itself (Stock = Stock + n), so a sale made while the
+    /// form was open isn't overwritten: the adjustment is the change the user made.
     /// </summary>
     private async Task AplicarStockAsync(
         Producto producto,
@@ -216,16 +226,21 @@ public class ProductoServicio(
         foreach (var (tallaId, (talla, unidades)) in pedidas)
         {
             var actual = producto.Tallas.SingleOrDefault(t => t.TallaId == tallaId);
+            var diferencia = unidades - (actual?.Stock ?? 0);
             if (actual is null)
             {
-                actual = new ProductoTalla { Talla = talla };
-                producto.Tallas.Add(actual);
+                producto.Tallas.Add(new ProductoTalla { Talla = talla, Stock = unidades });
             }
-            var diferencia = unidades - actual.Stock;
+            else if (diferencia != 0 && !await productos.CambiarStockAsync(producto.Id, tallaId, diferencia, ct))
+            {
+                var quedan = await productos.StockAsync(producto.Id, tallaId, ct);
+                throw new ConflictoException(
+                    $"El stock de la talla {talla.Valor} cambió mientras editabas (ahora hay {quedan}). Vuelve a abrir el producto."
+                );
+            }
             if (diferencia == 0)
                 continue;
 
-            actual.Stock = unidades;
             productos.AgregarMovimiento(
                 new MovimientoInventario
                 {

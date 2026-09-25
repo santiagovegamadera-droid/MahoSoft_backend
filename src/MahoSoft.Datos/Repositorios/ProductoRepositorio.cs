@@ -30,6 +30,16 @@ public interface IProductoRepositorio
     /// <summary>Whether another product (other than <paramref name="excluirProductoId"/>) shows this image.</summary>
     Task<bool> ImagenEnUsoAsync(Guid archivoId, int excluirProductoId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Adds <paramref name="cantidad"/> units (negative to take them out) in the database itself, never leaving the
+    /// stock below 0. False when the product doesn't come in that size, or has fewer units than it takes out.
+    /// Runs right away, so call it inside the transaction of the operation.
+    /// </summary>
+    Task<bool> CambiarStockAsync(int productoId, int tallaId, int cantidad, CancellationToken ct = default);
+
+    /// <summary>Units of one size right now (0 if the product doesn't come in it).</summary>
+    Task<int> StockAsync(int productoId, int tallaId, CancellationToken ct = default);
+
     void Agregar(Producto producto);
 
     void Eliminar(Producto producto);
@@ -71,6 +81,15 @@ public class ProductoRepositorio(AppDbContext db) : IProductoRepositorio
 
     public Task<bool> ImagenEnUsoAsync(Guid archivoId, int excluirProductoId, CancellationToken ct = default) =>
         db.Productos.AnyAsync(p => p.ImagenId == archivoId && p.Id != excluirProductoId, ct);
+
+    public async Task<bool> CambiarStockAsync(int productoId, int tallaId, int cantidad, CancellationToken ct = default) =>
+        await db.ProductoTallas.Where(t => t.ProductoId == productoId && t.TallaId == tallaId && t.Stock + cantidad >= 0)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.Stock, t => t.Stock + cantidad), ct) > 0;
+
+    public async Task<int> StockAsync(int productoId, int tallaId, CancellationToken ct = default) =>
+        await db.ProductoTallas.Where(t => t.ProductoId == productoId && t.TallaId == tallaId)
+            .Select(t => (int?)t.Stock)
+            .SingleOrDefaultAsync(ct) ?? 0;
 
     public void Agregar(Producto producto) => db.Productos.Add(producto);
 

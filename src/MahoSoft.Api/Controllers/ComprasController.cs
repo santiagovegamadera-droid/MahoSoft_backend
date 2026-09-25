@@ -1,6 +1,7 @@
 using System.Text.Json;
 using MahoSoft.Api.Auth;
 using MahoSoft.Entidades;
+using MahoSoft.Negocio;
 using MahoSoft.Negocio.Compras;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +27,7 @@ public class ComprasController(ICompraServicio compras, IOptions<JsonOptions> js
     /// </summary>
     [HttpPost]
     [Consumes("multipart/form-data")]
-    [RequestSizeLimit(CompraServicio.DocumentoTamanoMaximo + 256 * 1024)]
+    [RequestSizeLimit(Documentos.TamanoMaximo + 256 * 1024)]
     public async Task<ActionResult<CompraDto>> Registrar([FromForm] string datos, IFormFile? documento, CancellationToken ct)
     {
         CompraRequest? req;
