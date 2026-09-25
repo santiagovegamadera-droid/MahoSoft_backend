@@ -14,6 +14,9 @@ public interface IConfiguracionRepositorio
 
     Task<List<TipoDocumento>> ListarTiposDocumentoAsync(CancellationToken ct = default);
 
+    /// <summary>The document type with that code (CC, NIT…), active or not, or null.</summary>
+    Task<TipoDocumento?> ObtenerTipoDocumentoAsync(string codigo, CancellationToken ct = default);
+
     Task<List<Banco>> ListarBancosAsync(CancellationToken ct = default);
 
     Task<List<DescuentoPos>> ListarDescuentosAsync(CancellationToken ct = default);
@@ -43,6 +46,9 @@ public class ConfiguracionRepositorio(AppDbContext db) : IConfiguracionRepositor
 
     public Task<List<TipoDocumento>> ListarTiposDocumentoAsync(CancellationToken ct = default) =>
         db.TiposDocumento.OrderBy(t => t.Orden).ToListAsync(ct);
+
+    public Task<TipoDocumento?> ObtenerTipoDocumentoAsync(string codigo, CancellationToken ct = default) =>
+        db.TiposDocumento.SingleOrDefaultAsync(t => t.Codigo == codigo, ct);
 
     public Task<List<Banco>> ListarBancosAsync(CancellationToken ct = default) =>
         db.Bancos.OrderBy(b => b.Orden).ToListAsync(ct);

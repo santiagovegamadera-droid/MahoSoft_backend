@@ -97,6 +97,15 @@ Las listas se guardan como el usuario las ve. Lo que sale de la lista se borra, 
 - Una talla que ya usan productos, compras, ventas o movimientos de inventario **no se puede quitar** (409). Una talla puede cambiar de grupo sin perder su stock.
 - Los descuentos del POS se borran sin más: cada venta guarda su propio porcentaje.
 
+## Proveedores
+
+Leer: permiso `Proveedores` o `Compras` (las compras eligen un proveedor y muestran sus datos). Crear, editar y eliminar: permiso `Proveedores`.
+
+- `GET /api/proveedores` → `[{ id, nombre, tipoDocumento, documento, direccion, ciudad, telefono, email, contacto, ivaPorcentaje, activo, compras, productos, categorias: [{ id, nombre }] }]`, por nombre. `compras`, `productos` (distintos) y `categorias` (lo que surte) salen de sus compras.
+- `GET /api/proveedores/{id}`.
+- `POST /api/proveedores` y `PUT /api/proveedores/{id}` `{ nombre, tipoDocumento, documento, direccion, ciudad, telefono, email, contacto, ivaPorcentaje, activo }`. `tipoDocumento` es el código (`NIT`, `CC`…); no se repite el mismo documento (409).
+- `DELETE /api/proveedores/{id}` → 204; 409 si tiene compras (se desactiva en su lugar).
+
 ## Categorías
 
 Leer: cualquier usuario con sesión (el punto de venta filtra por ellas). Crear, editar y eliminar: permiso `Compras`.

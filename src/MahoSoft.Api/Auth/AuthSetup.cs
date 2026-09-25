@@ -14,6 +14,13 @@ public static class RateLimits
     public const string Login = "login";
 }
 
+/// <summary>Policies that accept any of several permissions, for data that more than one module reads.</summary>
+public static class Politicas
+{
+    /// <summary>Suppliers: their own screen, and Compras, which picks one for each purchase.</summary>
+    public const string VerProveedores = "VerProveedores";
+}
+
 public static class AuthSetup
 {
     /// <summary>
@@ -52,6 +59,10 @@ public static class AuthSetup
             o.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
             foreach (var permiso in Enum.GetValues<Permiso>())
                 o.AddPolicy(permiso.ToString(), p => p.RequireClaim(Claims.Permiso, permiso.ToString()));
+            o.AddPolicy(
+                Politicas.VerProveedores,
+                p => p.RequireClaim(Claims.Permiso, nameof(Permiso.Proveedores), nameof(Permiso.Compras))
+            );
         });
 
         services.AddRateLimiter(o =>
