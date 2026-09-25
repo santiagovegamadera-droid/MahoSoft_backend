@@ -4,7 +4,7 @@ using MahoSoft.Negocio;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddNegocio(builder.Configuration.GetConnectionString("MahoSoft"));
+builder.Services.AddNegocio(builder.Configuration);
 builder.Services.AddMahoAuth(builder.Configuration);
 
 // The web app runs on its own origin (Vite dev server, later its hosting)

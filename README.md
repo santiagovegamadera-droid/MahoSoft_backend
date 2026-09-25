@@ -59,6 +59,14 @@ La primera vez, crea la clave secreta con la que se firman las sesiones (no se g
 dotnet user-secrets set "Jwt:Key" "<al menos 32 caracteres aleatorios>" --project src/MahoSoft.Api
 ```
 
+Para subir fotos de productos, las credenciales de Cloudinary (Dashboard → Settings → API Keys). Sin ellas la API arranca igual, pero subir una foto falla:
+
+```bash
+dotnet user-secrets set "Cloudinary:CloudName" "<cloud name>" --project src/MahoSoft.Api
+dotnet user-secrets set "Cloudinary:ApiKey" "<api key>" --project src/MahoSoft.Api
+dotnet user-secrets set "Cloudinary:ApiSecret" "<api secret>" --project src/MahoSoft.Api
+```
+
 Luego:
 
 ```bash
@@ -96,6 +104,21 @@ Las listas se guardan como el usuario las ve. Lo que sale de la lista se borra, 
 - Un banco usado en un comprobante de transferencia, o un tipo de documento que tiene un proveedor, usuario o cliente, se **desactiva** (deja de ofrecerse y el historial queda intacto). Si se vuelve a agregar, se reactiva.
 - Una talla que ya usan productos, compras, ventas o movimientos de inventario **no se puede quitar** (409). Una talla puede cambiar de grupo sin perder su stock.
 - Los descuentos del POS se borran sin más: cada venta guarda su propio porcentaje.
+
+## Productos
+
+Leer: cualquier usuario con sesión (el punto de venta los vende). Crear, editar, eliminar y subir fotos: permiso `Compras`.
+
+- `GET /api/productos` → `[{ id, nombre, categoriaId, precioVenta, costo, descripcion, colores: [], stock: { "S": 3, "M": 0 }, activo, imagenId, imagenUrl, proveedores: [{ id, nombre }], ultimaCompra: { numero, fecha, proveedorId, proveedor } }]`, por nombre. `stock` sigue el orden de tallas de Configuración; `costo` (sin IVA), `proveedores` (el más reciente primero) y `ultimaCompra` salen de las compras.
+- `GET /api/productos/{id}`.
+- `POST /api/productos` y `PUT /api/productos/{id}` `{ nombre, categoriaId, precioVenta, descripcion, colores, stock, imagenId, activo }`.
+- `DELETE /api/productos/{id}` → 204; 409 si ya tiene compras o ventas (se desactiva en su lugar).
+- `POST /api/productos/imagenes` (multipart, campo `archivo`; JPG, PNG o WebP de hasta 5 MB) → `{ id, url }`. Luego se guarda el producto con ese `imagenId`.
+
+Reglas:
+
+- `stock` son las tallas que tiene el producto y sus unidades. Cada cambio de unidades queda como movimiento de **ajuste** con el usuario que guardó ("Stock inicial" al crear). Una talla con unidades no se puede quitar (409): primero se pone en 0.
+- Las fotos van a Cloudinary (carpeta `mahosoft/productos`, máximo 1200 px por lado). Al cambiar o quitar la foto, o al eliminar el producto, la anterior se borra de Cloudinary. Las fotos de ejemplo son enlaces externos y no se tocan.
 
 ## Proveedores
 

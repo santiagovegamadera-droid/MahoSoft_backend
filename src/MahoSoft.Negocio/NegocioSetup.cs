@@ -3,8 +3,10 @@ using MahoSoft.Entidades;
 using MahoSoft.Negocio.Auth;
 using MahoSoft.Negocio.Categorias;
 using MahoSoft.Negocio.Configuracion;
+using MahoSoft.Negocio.Productos;
 using MahoSoft.Negocio.Proveedores;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MahoSoft.Negocio;
@@ -12,15 +14,16 @@ namespace MahoSoft.Negocio;
 public static class NegocioSetup
 {
     /// <summary>The business services and, beneath them, the data layer. The API only registers this.</summary>
-    public static IServiceCollection AddNegocio(this IServiceCollection services, string? connectionString)
+    public static IServiceCollection AddNegocio(this IServiceCollection services, IConfiguration config)
     {
-        services.AddDatos(connectionString);
+        services.AddDatos(config);
         services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 
         services.AddScoped<IAuthServicio, AuthServicio>();
         services.AddScoped<ICategoriaServicio, CategoriaServicio>();
         services.AddScoped<IConfiguracionServicio, ConfiguracionServicio>();
         services.AddScoped<IProveedorServicio, ProveedorServicio>();
+        services.AddScoped<IProductoServicio, ProductoServicio>();
 
         return services;
     }

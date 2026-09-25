@@ -1,24 +1,36 @@
+using MahoSoft.Datos.Archivos;
 using MahoSoft.Datos.Repositorios;
 using MahoSoft.Datos.Seed;
 using MahoSoft.Entidades;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MahoSoft.Datos;
 
 public static class DatosSetup
 {
-    /// <summary>The database context, the repositories and the unit of work.</summary>
-    public static IServiceCollection AddDatos(this IServiceCollection services, string? connectionString)
+    /// <summary>
+    /// The database context, the repositories, the unit of work and the image storage. Cloudinary's settings are
+    /// checked when the first image is uploaded, so the API still starts on a machine without them.
+    /// </summary>
+    public static IServiceCollection AddDatos(this IServiceCollection services, IConfiguration config)
     {
-        services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString));
+        services.AddDbContext<AppDbContext>(o => o.UseSqlServer(config.GetConnectionString("MahoSoft")));
         services.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();
 
         services.AddScoped<IUsuarioRepositorio, UsuarioRepositorio>();
         services.AddScoped<ICategoriaRepositorio, CategoriaRepositorio>();
         services.AddScoped<IConfiguracionRepositorio, ConfiguracionRepositorio>();
         services.AddScoped<IProveedorRepositorio, ProveedorRepositorio>();
+        services.AddScoped<IProductoRepositorio, ProductoRepositorio>();
+
+        services
+            .AddOptions<CloudinaryOptions>()
+            .Bind(config.GetSection(CloudinaryOptions.Seccion))
+            .ValidateDataAnnotations();
+        services.AddSingleton<IAlmacenImagenes, CloudinaryAlmacen>();
 
         return services;
     }
