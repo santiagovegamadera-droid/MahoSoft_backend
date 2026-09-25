@@ -74,6 +74,8 @@ dotnet tool restore
 dotnet run --project src/MahoSoft.Api --launch-profile http
 ```
 
+Las facturas de proveedores se guardan en el disco, en `Archivos:Carpeta` (`App_Data/archivos` dentro de la API por defecto; está en `.gitignore`).
+
 La API queda en `http://localhost:5241`. El frontend (`http://localhost:8443`) está permitido en `Cors:Origenes`.
 
 En modo desarrollo, al arrancar se aplican las migraciones y, si la base está vacía, se cargan los datos de ejemplo. Los usuarios de ejemplo tienen la contraseña `Maho2026!`.
@@ -104,6 +106,26 @@ Las listas se guardan como el usuario las ve. Lo que sale de la lista se borra, 
 - Un banco usado en un comprobante de transferencia, o un tipo de documento que tiene un proveedor, usuario o cliente, se **desactiva** (deja de ofrecerse y el historial queda intacto). Si se vuelve a agregar, se reactiva.
 - Una talla que ya usan productos, compras, ventas o movimientos de inventario **no se puede quitar** (409). Una talla puede cambiar de grupo sin perder su stock.
 - Los descuentos del POS se borran sin más: cada venta guarda su propio porcentaje.
+
+## Compras
+
+Todo con permiso `Compras`.
+
+- `GET /api/compras` → las compras, la factura más reciente primero: `{ id, numero, proveedorId, proveedor, tipoComprobante, numeroComprobante, fecha, hora, vendedorProveedor, cufe, condicionPago, fechaVencimiento, estadoPago, ivaPorcentaje, preciosIncluyenIva, subtotal, descuento, iva, total, valorComprobante, notas, usuario, documento: { nombre, tipoMime, tamano }, unidades, items: [{ productoId, producto, talla, referenciaProveedor, cantidad, precioUnitario, costoUnitario }] }`.
+- `GET /api/compras/{id}`.
+- `POST /api/compras` (multipart): `datos` = JSON `{ proveedorId, tipoComprobante, numeroComprobante, fecha: "2026-09-25", hora: "14:30" | "", vendedorProveedor, cufe, condicionPago: "Contado" | "Credito", fechaVencimiento, estadoPago: "Pagada" | "Pendiente", ivaPorcentaje, preciosIncluyenIva, descuento, valorComprobante, notas, items: [{ productoId, talla, referenciaProveedor, cantidad, precioUnitario }] }` y `documento` = PDF o foto opcional (JPG, PNG o WebP, hasta 10 MB; se revisa el contenido, no solo la extensión). → 201.
+- `POST /api/compras/{id}/pagada` → marca la compra como pagada.
+- `GET /api/compras/{id}/documento` → el PDF o la foto de la factura.
+
+Al registrar, en una sola transacción:
+
+- Se asigna el consecutivo `OC-{año}-NNN`, bloqueando la lectura para que dos compras simultáneas no reciban el mismo número.
+- El servidor calcula los totales: subtotal sin IVA, descuento sobre el subtotal, IVA sobre lo que queda. El costo de cada prenda es su precio sin IVA menos su parte del descuento.
+- Cada línea suma su stock con un movimiento de **entrada** (si el producto no tenía esa talla, la agrega) y actualiza el costo del producto, salvo que ya haya una compra con fecha de factura posterior.
+- La misma factura de un proveedor no se registra dos veces (409). El proveedor debe estar activo.
+- Si algo falla, no queda nada: ni la compra ni el archivo en el disco.
+
+Los enums viajan como texto (`"Credito"`, `"Pagada"`) en toda la API.
 
 ## Productos
 

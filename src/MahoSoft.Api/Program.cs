@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using MahoSoft.Api.Auth;
 using MahoSoft.Api.Errores;
 using MahoSoft.Negocio;
@@ -16,7 +17,10 @@ builder.Services.AddCors(o =>
     )
 );
 
-builder.Services.AddControllers(o => o.Filters.Add<NegocioExceptionFilter>());
+builder
+    .Services.AddControllers(o => o.Filters.Add<NegocioExceptionFilter>())
+    // Enums travel by name ("Credito", "Pagada"), the same text stored in the database
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();

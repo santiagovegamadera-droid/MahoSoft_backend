@@ -25,12 +25,16 @@ public static class DatosSetup
         services.AddScoped<IConfiguracionRepositorio, ConfiguracionRepositorio>();
         services.AddScoped<IProveedorRepositorio, ProveedorRepositorio>();
         services.AddScoped<IProductoRepositorio, ProductoRepositorio>();
+        services.AddScoped<ICompraRepositorio, CompraRepositorio>();
 
         services
             .AddOptions<CloudinaryOptions>()
             .Bind(config.GetSection(CloudinaryOptions.Seccion))
             .ValidateDataAnnotations();
         services.AddSingleton<IAlmacenImagenes, CloudinaryAlmacen>();
+
+        services.AddOptions<ArchivosOptions>().Bind(config.GetSection(ArchivosOptions.Seccion));
+        services.AddSingleton<IAlmacenDocumentos, DiscoAlmacen>();
 
         return services;
     }
