@@ -1,6 +1,7 @@
 using MahoSoft.Datos;
 using MahoSoft.Entidades;
 using MahoSoft.Negocio.Auth;
+using MahoSoft.Negocio.Categorias;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,6 +16,7 @@ public static class NegocioSetup
         services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 
         services.AddScoped<IAuthServicio, AuthServicio>();
+        services.AddScoped<ICategoriaServicio, CategoriaServicio>();
 
         return services;
     }

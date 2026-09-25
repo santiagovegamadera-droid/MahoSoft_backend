@@ -16,6 +16,7 @@ public static class DatosSetup
         services.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();
 
         services.AddScoped<IUsuarioRepositorio, UsuarioRepositorio>();
+        services.AddScoped<ICategoriaRepositorio, CategoriaRepositorio>();
 
         return services;
     }

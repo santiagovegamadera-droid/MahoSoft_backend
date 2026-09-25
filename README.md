@@ -68,6 +68,14 @@ dotnet run --project src/MahoSoft.Api --launch-profile http
 
 La API queda en `http://localhost:5241`. El frontend (`http://localhost:8443`) está permitido en `Cors:Origenes`.
 
+En modo desarrollo, al arrancar se aplican las migraciones y, si la base está vacía, se cargan los datos de ejemplo. Los usuarios de ejemplo tienen la contraseña `Maho2026!`.
+
+Para cambiar el modelo:
+
+```bash
+dotnet ef migrations add NombreDelCambio --project src/MahoSoft.Datos --startup-project src/MahoSoft.Api --output-dir Migrations
+```
+
 ## Autenticación
 
 - `POST /api/auth/login` `{ email, password }` → token JWT + usuario (nombre, rol, permisos). Máximo 5 intentos por minuto por dirección.
@@ -76,10 +84,12 @@ La API queda en `http://localhost:5241`. El frontend (`http://localhost:8443`) e
 
 Todas las rutas exigen sesión salvo las marcadas con `[AllowAnonymous]`. Para exigir un permiso: `[Authorize(Policy = nameof(Permiso.Compras))]`. En cada petición el usuario se vuelve a leer de la base de datos, así que desactivarlo o cambiarle permisos aplica de inmediato. La sesión dura 12 horas (`Jwt:ExpiraHoras`).
 
-En modo desarrollo, al arrancar se aplican las migraciones y, si la base está vacía, se cargan los datos de ejemplo. Los usuarios de ejemplo tienen la contraseña `Maho2026!`.
+## Categorías
 
-Para cambiar el modelo:
+Leer: cualquier usuario con sesión (el punto de venta filtra por ellas). Crear, editar y eliminar: permiso `Compras`.
 
-```bash
-dotnet ef migrations add NombreDelCambio --project src/MahoSoft.Datos --startup-project src/MahoSoft.Api --output-dir Migrations
-```
+- `GET /api/categorias` → `[{ id, nombre, descripcion, activo, productos, productosActivos }]`, por nombre.
+- `GET /api/categorias/{id}`.
+- `POST /api/categorias` `{ nombre, descripcion, activo }` → 201. El nombre no se puede repetir (409).
+- `PUT /api/categorias/{id}` `{ nombre, descripcion, activo }`; también sirve para activar o desactivar.
+- `DELETE /api/categorias/{id}` → 204; 409 si tiene productos (se desactiva en su lugar).
