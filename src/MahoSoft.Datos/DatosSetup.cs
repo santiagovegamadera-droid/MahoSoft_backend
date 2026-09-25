@@ -17,6 +17,7 @@ public static class DatosSetup
 
         services.AddScoped<IUsuarioRepositorio, UsuarioRepositorio>();
         services.AddScoped<ICategoriaRepositorio, CategoriaRepositorio>();
+        services.AddScoped<IConfiguracionRepositorio, ConfiguracionRepositorio>();
 
         return services;
     }

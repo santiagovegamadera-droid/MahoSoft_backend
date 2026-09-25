@@ -2,6 +2,7 @@ using MahoSoft.Datos;
 using MahoSoft.Entidades;
 using MahoSoft.Negocio.Auth;
 using MahoSoft.Negocio.Categorias;
+using MahoSoft.Negocio.Configuracion;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +18,7 @@ public static class NegocioSetup
 
         services.AddScoped<IAuthServicio, AuthServicio>();
         services.AddScoped<ICategoriaServicio, CategoriaServicio>();
+        services.AddScoped<IConfiguracionServicio, ConfiguracionServicio>();
 
         return services;
     }

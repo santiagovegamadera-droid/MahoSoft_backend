@@ -84,6 +84,19 @@ dotnet ef migrations add NombreDelCambio --project src/MahoSoft.Datos --startup-
 
 Todas las rutas exigen sesión salvo las marcadas con `[AllowAnonymous]`. Para exigir un permiso: `[Authorize(Policy = nameof(Permiso.Compras))]`. En cada petición el usuario se vuelve a leer de la base de datos, así que desactivarlo o cambiarle permisos aplica de inmediato. La sesión dura 12 horas (`Jwt:ExpiraHoras`).
 
+## Configuración
+
+Leer: cualquier usuario con sesión (recibos, punto de venta, formularios). Modificar: solo la administradora (rol `Administradora`).
+
+- `GET /api/configuracion` → `{ nombre, nit, direccion, ciudad, telefono, correo, instagram, mensajeRecibo, stockBajoProducto, stockBajoTalla, descuentos: [0, 5…], bancos: ["Nequi"…], tallas: [{ nombre, valores: ["XS"…] }], tiposDocumento: ["CC"…] }`. Los textos vacíos llegan como `""`; bancos y tipos de documento, solo los activos y en orden.
+- Cada sección se guarda entera y responde con toda la configuración: `PUT /api/configuracion/negocio`, `/inventario`, `/pos` (`{ descuentos, bancos }`), `/tallas` (`{ tallas }`) y `/tipos-documento` (`{ tiposDocumento }`).
+
+Las listas se guardan como el usuario las ve. Lo que sale de la lista se borra, salvo lo que tiene historial:
+
+- Un banco usado en un comprobante de transferencia, o un tipo de documento que tiene un proveedor, usuario o cliente, se **desactiva** (deja de ofrecerse y el historial queda intacto). Si se vuelve a agregar, se reactiva.
+- Una talla que ya usan productos, compras, ventas o movimientos de inventario **no se puede quitar** (409). Una talla puede cambiar de grupo sin perder su stock.
+- Los descuentos del POS se borran sin más: cada venta guarda su propio porcentaje.
+
 ## Categorías
 
 Leer: cualquier usuario con sesión (el punto de venta filtra por ellas). Crear, editar y eliminar: permiso `Compras`.
