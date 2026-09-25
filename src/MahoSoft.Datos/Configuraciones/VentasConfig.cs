@@ -1,8 +1,8 @@
-using MahoSoft.Api.Data.Entities;
+using MahoSoft.Entidades;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace MahoSoft.Api.Data.Configurations;
+namespace MahoSoft.Datos.Configuraciones;
 
 public class ClienteConfig : IEntityTypeConfiguration<Cliente>
 {

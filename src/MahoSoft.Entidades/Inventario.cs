@@ -1,4 +1,4 @@
-namespace MahoSoft.Api.Data.Entities;
+namespace MahoSoft.Entidades;
 
 /// <summary>
 /// Every change to stock, with its reason. The sum of a product size's movements equals its

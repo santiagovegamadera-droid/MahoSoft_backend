@@ -1,4 +1,4 @@
-namespace MahoSoft.Api.Data.Entities;
+namespace MahoSoft.Entidades;
 
 /// <summary>A returning customer, so their details don't have to be typed again. Walk-in sales have no customer.</summary>
 public class Cliente

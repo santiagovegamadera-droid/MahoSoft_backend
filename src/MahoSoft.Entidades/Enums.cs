@@ -1,4 +1,4 @@
-namespace MahoSoft.Api.Data.Entities;
+namespace MahoSoft.Entidades;
 
 // Stored as text in the database so rows read the same as in the app
 

@@ -1,4 +1,4 @@
-namespace MahoSoft.Api.Data.Entities;
+namespace MahoSoft.Entidades;
 
 /// <summary>A supplier invoice. Totals are stored so old purchases never change if the math does.</summary>
 public class Compra

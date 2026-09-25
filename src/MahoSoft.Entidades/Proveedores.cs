@@ -1,4 +1,4 @@
-namespace MahoSoft.Api.Data.Entities;
+namespace MahoSoft.Entidades;
 
 /// <summary>
 /// A supplier as it prints itself on its invoices. The categories it supplies aren't stored:

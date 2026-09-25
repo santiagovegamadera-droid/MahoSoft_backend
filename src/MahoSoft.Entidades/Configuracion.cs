@@ -1,4 +1,4 @@
-namespace MahoSoft.Api.Data.Entities;
+namespace MahoSoft.Entidades;
 
 /// <summary>The store's own details (a single row): printed on receipts and shown as the buyer on purchases.</summary>
 public class Negocio

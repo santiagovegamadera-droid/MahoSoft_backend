@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace MahoSoft.Api.Data.Migrations
+namespace MahoSoft.Datos.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration

@@ -1,7 +1,7 @@
-using MahoSoft.Api.Data.Entities;
+using MahoSoft.Entidades;
 using Microsoft.EntityFrameworkCore;
 
-namespace MahoSoft.Api.Data;
+namespace MahoSoft.Datos;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {

@@ -6,16 +6,39 @@ El frontend está en [MahoSoft](https://github.com/santiagovegamadera-droid/Maho
 
 ## Tecnología
 
-- .NET 9 (ASP.NET Core Web API) — `src/MahoSoft.Api`
+- .NET 9 (ASP.NET Core Web API)
 - Entity Framework Core 9 con SQL Server
 - Imágenes de productos en Cloudinary; PDF de facturas de proveedores en el disco del servidor
 
+## Arquitectura en capas
+
+Cada capa es un proyecto y solo conoce a la de abajo:
+
+```
+MahoSoft.Api  →  MahoSoft.Negocio  →  MahoSoft.Datos  →  MahoSoft.Entidades
+```
+
+| Proyecto | Qué contiene |
+| --- | --- |
+| `src/MahoSoft.Api` | Presentación: controladores (delgados, sin lógica), autenticación JWT, `Program.cs`. |
+| `src/MahoSoft.Negocio` | Servicios con las reglas del negocio, DTOs de entrada y salida, excepciones de negocio. Una carpeta por módulo (`Auth/`, `Categorias/`…). |
+| `src/MahoSoft.Datos` | `AppDbContext`, configuraciones de EF, migraciones, datos de ejemplo y repositorios. |
+| `src/MahoSoft.Entidades` | Una clase por tabla y los enums. La usan todas las capas. |
+
+Reglas:
+
+- La API no ve `MahoSoft.Datos` (`DisableTransitiveProjectReferences` en su `.csproj`): un controlador que intente usar el `AppDbContext` o un repositorio no compila. Los controladores reciben y devuelven DTOs, nunca entidades.
+- Los servicios leen y escriben solo a través de los repositorios (`IXxxRepositorio`) y guardan con `IUnidadDeTrabajo.GuardarCambiosAsync()`, una vez por operación.
+- Cuando una regla impide la operación, el servicio lanza una excepción de `Negocio/Excepciones.cs` (`ValidacionException` 400, `NoAutenticadoException` 401, `AccesoDenegadoException` 403, `NoEncontradoException` 404, `ConflictoException` 409). `NegocioExceptionFilter` la convierte en una respuesta ProblemDetails cuyo `detail` es el mensaje para el usuario.
+- Cada capa registra lo suyo: `AddDatos` (repositorios) y `AddNegocio` (servicios, que a su vez llama a `AddDatos`). La API solo llama a `AddNegocio`.
+
+Para agregar un módulo: repositorio en `Datos/Repositorios`, servicio y DTOs en `Negocio/<Modulo>/`, registrarlos en `DatosSetup` y `NegocioSetup`, y el controlador en `Api/Controllers`.
+
 ## Base de datos
 
-El modelo está en `src/MahoSoft.Api/Data`:
+El modelo está en `src/MahoSoft.Entidades` (una clase por tabla, agrupadas por área: configuración, catálogo, compras, ventas, inventario) y `src/MahoSoft.Datos`:
 
-- `Entities/` — una clase por tabla, agrupadas por área (configuración, catálogo, compras, ventas, inventario)
-- `Configurations/` — longitudes, índices únicos, relaciones y validaciones (check constraints)
+- `Configuraciones/` — longitudes, índices únicos, relaciones y validaciones (check constraints)
 - `Migrations/` — historial de cambios del esquema
 - `Seed/DbSeeder.cs` — datos de ejemplo iguales a los del frontend
 
@@ -58,5 +81,5 @@ En modo desarrollo, al arrancar se aplican las migraciones y, si la base está v
 Para cambiar el modelo:
 
 ```bash
-dotnet ef migrations add NombreDelCambio --project src/MahoSoft.Api --output-dir Data/Migrations
+dotnet ef migrations add NombreDelCambio --project src/MahoSoft.Datos --startup-project src/MahoSoft.Api --output-dir Migrations
 ```

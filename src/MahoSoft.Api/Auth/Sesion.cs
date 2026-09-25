@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using MahoSoft.Api.Data.Entities;
+using MahoSoft.Negocio.Auth;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -17,13 +17,6 @@ public static class Claims
     public const string Permiso = "permiso";
 }
 
-/// <summary>The signed-in user as the frontend needs it.</summary>
-public record UsuarioSesion(int Id, string Nombre, string Email, string Rol, string[] Permisos)
-{
-    public static UsuarioSesion De(Usuario u) =>
-        new(u.Id, u.Nombre, u.Email, u.Rol.ToString(), u.Permisos.Select(p => p.Permiso.ToString()).Order().ToArray());
-}
-
 public record SesionResponse(string Token, DateTimeOffset ExpiraEn, UsuarioSesion Usuario);
 
 public class TokenService(IOptions<JwtOptions> options)
@@ -32,7 +25,7 @@ public class TokenService(IOptions<JwtOptions> options)
 
     public static SymmetricSecurityKey SigningKey(JwtOptions jwt) => new(Encoding.UTF8.GetBytes(jwt.Key));
 
-    public SesionResponse Crear(Usuario usuario)
+    public SesionResponse Crear(UsuarioSesion usuario)
     {
         var expira = DateTimeOffset.UtcNow.AddHours(_jwt.ExpiraHoras);
         var token = new JwtSecurityToken(
@@ -42,17 +35,17 @@ public class TokenService(IOptions<JwtOptions> options)
             expires: expira.UtcDateTime,
             signingCredentials: new SigningCredentials(SigningKey(_jwt), SecurityAlgorithms.HmacSha256)
         );
-        return new SesionResponse(new JwtSecurityTokenHandler().WriteToken(token), expira, UsuarioSesion.De(usuario));
+        return new SesionResponse(new JwtSecurityTokenHandler().WriteToken(token), expira, usuario);
     }
 
     /// <summary>Identity claims of a user; also used to refresh them from the database on every request.</summary>
-    public static IEnumerable<Claim> ClaimsDe(Usuario u) =>
+    public static IEnumerable<Claim> ClaimsDe(UsuarioSesion u) =>
         [
             new(Claims.Id, u.Id.ToString()),
             new(Claims.Nombre, u.Nombre),
             new(Claims.Email, u.Email),
-            new(Claims.Rol, u.Rol.ToString()),
-            .. u.Permisos.Select(p => new Claim(Claims.Permiso, p.Permiso.ToString())),
+            new(Claims.Rol, u.Rol),
+            .. u.Permisos.Select(p => new Claim(Claims.Permiso, p)),
         ];
 }
 

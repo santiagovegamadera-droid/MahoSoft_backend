@@ -1,8 +1,8 @@
-using MahoSoft.Api.Data.Entities;
+using MahoSoft.Entidades;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace MahoSoft.Api.Data.Seed;
+namespace MahoSoft.Datos.Seed;
 
 /// <summary>
 /// Loads the same sample data the frontend uses, so both look alike while the API is wired in.
