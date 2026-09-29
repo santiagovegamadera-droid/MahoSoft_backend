@@ -4,6 +4,7 @@ using MahoSoft.Negocio.Auth;
 using MahoSoft.Negocio.Categorias;
 using MahoSoft.Negocio.Compras;
 using MahoSoft.Negocio.Configuracion;
+using MahoSoft.Negocio.Inventario;
 using MahoSoft.Negocio.Productos;
 using MahoSoft.Negocio.Proveedores;
 using MahoSoft.Negocio.Reportes;
@@ -32,6 +33,7 @@ public static class NegocioSetup
         services.AddScoped<IVentaServicio, VentaServicio>();
         services.AddScoped<IUsuarioServicio, UsuarioServicio>();
         services.AddScoped<IReporteServicio, ReporteServicio>();
+        services.AddScoped<IInventarioServicio, InventarioServicio>();
 
         return services;
     }

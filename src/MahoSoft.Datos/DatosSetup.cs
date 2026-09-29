@@ -29,6 +29,7 @@ public static class DatosSetup
         services.AddScoped<IVentaRepositorio, VentaRepositorio>();
         services.AddScoped<IClienteRepositorio, ClienteRepositorio>();
         services.AddScoped<IReporteRepositorio, ReporteRepositorio>();
+        services.AddScoped<IInventarioRepositorio, InventarioRepositorio>();
 
         services
             .AddOptions<CloudinaryOptions>()

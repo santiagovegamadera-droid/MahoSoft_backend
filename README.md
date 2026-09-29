@@ -107,6 +107,18 @@ Las listas se guardan como el usuario las ve. Lo que sale de la lista se borra, 
 - Una talla que ya usan productos, compras, ventas o movimientos de inventario **no se puede quitar** (409). Una talla puede cambiar de grupo sin perder su stock.
 - Los descuentos del POS se borran sin más: cada venta guarda su propio porcentaje.
 
+## Inventario
+
+Con permiso `Compras`.
+
+- `GET /api/inventario/movimientos?productoId=&tipo=` → los 300 movimientos más recientes (opcionalmente de un producto o de un tipo: `Entrada`, `Salida`, `Ajuste`): `{ id, fecha, tipo, productoId, producto, talla, cantidad, motivo, usuario, compra, venta }`. `cantidad` lleva signo; `compra` o `venta` es el número del documento que lo originó.
+- `POST /api/inventario/ajustes` `{ productoId, talla, motivo, cantidad, nota }` → 201 con el movimiento creado. Según `motivo`:
+  - `Conteo`: `cantidad` son las unidades contadas; se registra un **ajuste** por la diferencia con el stock actual (si coincide, 400).
+  - `Danado` (dañada o perdida) y `DevolucionProveedor`: `cantidad` unidades salen (**salida**); 409 si no hay tantas.
+  - `Ingreso` (sin compra): `cantidad` unidades entran (**entrada**).
+
+El stock se cambia en la base de datos en la misma transacción que el movimiento, como en compras y ventas.
+
 ## Inicio y reportes
 
 Se calculan desde las ventas registradas (las anuladas no cuentan), en hora de Colombia. El ingreso de cada línea es su precio por cantidad menos su parte del descuento de la venta, así que categorías y productos suman lo vendido sin el envío.
