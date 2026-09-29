@@ -27,9 +27,6 @@ public interface IVentaServicio
     Task<VentaDto> AnularAsync(int id, AnularVentaRequest req, int usuarioId, CancellationToken ct = default);
 
     Task<DocumentoArchivo> ObtenerComprobanteAsync(int id, CancellationToken ct = default);
-
-    /// <summary>Customers to pick in the POS, by document, phone or name.</summary>
-    Task<List<ClienteDto>> BuscarClientesAsync(string texto, CancellationToken ct = default);
 }
 
 public class VentaServicio(
@@ -48,14 +45,6 @@ public class VentaServicio(
 
     public async Task<VentaDto> ObtenerAsync(int id, CancellationToken ct = default) =>
         VentaDto.De(await ventas.ObtenerAsync(id, ct) ?? throw new NoEncontradoException(NoExiste));
-
-    public async Task<List<ClienteDto>> BuscarClientesAsync(string texto, CancellationToken ct = default)
-    {
-        texto = (texto ?? "").Trim();
-        if (texto.Length < 3)
-            return [];
-        return (await clientes.BuscarAsync(texto, ct)).Select(ClienteDto.De).ToList();
-    }
 
     public async Task<VentaDto> RegistrarAsync(
         VentaRequest req,

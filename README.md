@@ -214,7 +214,6 @@ Todo con permiso `POS`.
 - `POST /api/ventas/{id}/anular` `{ motivo }`.
 - `POST /api/ventas/{id}/enviar` `{ correo }` → envía el comprobante por correo (503 si el correo no está configurado).
 - `GET /api/ventas/{id}/comprobante` → el comprobante de la transferencia.
-- `GET /api/clientes?q=` → hasta 8 clientes cuyo documento, teléfono o nombre contiene el texto (mínimo 3 caracteres).
 
 Al registrar, en una sola transacción:
 

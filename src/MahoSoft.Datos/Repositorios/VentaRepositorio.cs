@@ -64,9 +64,6 @@ public class VentaRepositorio(AppDbContext db) : IVentaRepositorio
 
 public interface IClienteRepositorio
 {
-    /// <summary>Customers whose document or phone contains <paramref name="texto"/>, or whose name does; at most 8.</summary>
-    Task<List<Cliente>> BuscarAsync(string texto, CancellationToken ct = default);
-
     Task<Cliente?> ObtenerPorDocumentoAsync(int tipoDocumentoId, string documento, CancellationToken ct = default);
 
     /// <summary>The most recent customer with that phone, tracked for changes.</summary>
@@ -77,18 +74,6 @@ public interface IClienteRepositorio
 
 public class ClienteRepositorio(AppDbContext db) : IClienteRepositorio
 {
-    public Task<List<Cliente>> BuscarAsync(string texto, CancellationToken ct = default) =>
-        db.Clientes.AsNoTracking()
-            .Include(c => c.TipoDocumento)
-            .Where(c =>
-                (c.Documento != null && c.Documento.Contains(texto))
-                || (c.Telefono != null && c.Telefono.Contains(texto))
-                || c.Nombre.Contains(texto)
-            )
-            .OrderBy(c => c.Nombre)
-            .Take(8)
-            .ToListAsync(ct);
-
     public Task<Cliente?> ObtenerPorDocumentoAsync(int tipoDocumentoId, string documento, CancellationToken ct = default) =>
         db.Clientes.SingleOrDefaultAsync(c => c.TipoDocumentoId == tipoDocumentoId && c.Documento == documento, ct);
 

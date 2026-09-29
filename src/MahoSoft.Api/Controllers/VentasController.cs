@@ -76,14 +76,3 @@ public class VentasController(IVentaServicio ventas, IOptions<JsonOptions> json)
 }
 
 public record EnviarFacturaRequest(string Correo);
-
-/// <summary>Customers the POS can pick instead of typing their details again.</summary>
-[ApiController]
-[Route("api/clientes")]
-[Authorize(Policy = nameof(Permiso.POS))]
-public class ClientesController(IVentaServicio ventas) : ControllerBase
-{
-    /// <summary>By document, phone or name (at least 3 characters); at most 8.</summary>
-    [HttpGet]
-    public Task<List<ClienteDto>> Buscar([FromQuery] string q, CancellationToken ct) => ventas.BuscarClientesAsync(q, ct);
-}
