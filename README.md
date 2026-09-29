@@ -145,7 +145,7 @@ VITE_API_URL=https://api.tudominio.com npm run build
 dotnet test
 ```
 
-Cubren lo que no se puede romper: totales, costo y stock de las compras; precio, descuento y stock de las ventas; que compras y ventas simultáneas no pierdan ni vendan de más; anulaciones; ajustes de inventario; que el stock de cada talla sea la suma de sus movimientos; y qué puede hacer cada rol.
+Cubren lo que no se puede romper: totales, costo y stock de las compras; precio, descuento y stock de las ventas; que compras y ventas simultáneas no pierdan ni vendan de más; anulaciones; ajustes de inventario; que el stock de cada talla sea la suma de sus movimientos; que sin sesión nada responda y que no se puedan crear otros usuarios.
 
 ## Autenticación
 
@@ -161,7 +161,7 @@ Todas las rutas exigen sesión salvo las marcadas con `[AllowAnonymous]`. Para e
 
 ## Configuración
 
-Leer: cualquier usuario con sesión (recibos, punto de venta, formularios). Modificar: solo la administradora (rol `Administradora`).
+Leer y modificar: el administrador.
 
 - `GET /api/configuracion` → `{ nombre, nit, direccion, ciudad, telefono, correo, instagram, mensajeRecibo, stockBajoProducto, stockBajoTalla, descuentos: [0, 5…], bancos: ["Nequi"…], tallas: [{ nombre, valores: ["XS"…] }], tiposDocumento: ["CC"…] }`. Los textos vacíos llegan como `""`; bancos y tipos de documento, solo los activos y en orden.
 - Cada sección se guarda entera y responde con toda la configuración: `PUT /api/configuracion/negocio`, `/inventario`, `/pos` (`{ descuentos, bancos }`), `/tallas` (`{ tallas }`) y `/tipos-documento` (`{ tiposDocumento }`).
@@ -194,22 +194,15 @@ Se calculan desde las ventas registradas (las anuladas no cuentan), en hora de C
 
 El Excel se genera con ClosedXML y el PDF con QuestPDF, con la licencia Community (gratuita para negocios que facturan menos de 1 millón de dólares al año; se declara en `Program.cs`).
 
-## Usuarios y perfil
+## Usuario y perfil
 
-Usuarios, con permiso `Usuarios`:
+El sistema tiene **un solo usuario: el administrador**, con acceso a todo. No hay pantalla ni endpoints para crear o administrar otros usuarios. En producción esa cuenta se crea en el primer arranque con las variables `Inicial__…` (ver "Publicar"); en desarrollo es la de ejemplo, `ana@ellaboutique.co`.
 
-- `GET /api/usuarios` → `[{ id, nombre, email, rol, telefono, tipoDocumento, documento, activo, ultimoAcceso, creadoEn, permisos }]`, por nombre. Nunca incluye la contraseña.
-- `POST /api/usuarios` `{ nombre, email, rol, telefono, tipoDocumento, documento, permisos, activo, password }` → 201. La contraseña inicial es obligatoria (mínimo 8 caracteres).
-- `PUT /api/usuarios/{id}` (los mismos campos, sin `password`); también activa o desactiva.
-- `POST /api/usuarios/{id}/password` `{ nueva }` → restablece la contraseña.
+- `GET /api/perfil` → los datos propios: `{ id, nombre, email, rol, telefono, tipoDocumento, documento, activo, ultimoAcceso, creadoEn, permisos }`. Nunca incluye la contraseña.
+- `PUT /api/perfil` `{ nombre, email, telefono, tipoDocumento, documento }`. El email es el de inicio de sesión; no se repite y se guarda en minúsculas.
+- La contraseña se cambia con `POST /api/auth/cambiar-password` `{ actual, nueva }`, o por correo con "¿Olvidaste tu contraseña?".
 
-Reglas: el email no se repite (409) y se guarda en minúsculas. Los usuarios no se borran, se desactivan (un desactivado no puede iniciar sesión y su sesión abierta deja de servir). Nadie puede desactivarse ni quitarse el permiso `Usuarios` a sí mismo, y siempre debe quedar al menos un usuario activo con ese permiso.
-
-Perfil, para cualquier usuario con sesión:
-
-- `GET /api/perfil` → los datos propios, con la misma forma que un usuario.
-- `PUT /api/perfil` `{ nombre, email, telefono, tipoDocumento, documento }`. El rol y los permisos solo los cambia quien tiene el permiso `Usuarios`.
-- La contraseña propia se cambia con `POST /api/auth/cambiar-password` `{ actual, nueva }`.
+Los roles y permisos siguen en el modelo (el administrador los tiene todos y los endpoints los siguen exigiendo), pero no se usan para nada más.
 
 ## Ventas
 

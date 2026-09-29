@@ -83,16 +83,9 @@ public static class DbSeeder
             u.PasswordHash = hasher.HashPassword(u, PasswordInicial);
             return u;
         }
-        var usuarios = new[]
-        {
-            NuevoUsuario("Ana Martínez", "ana@ellaboutique.co", Rol.Administradora, todos, true, "2026-09-23 08:15"),
-            NuevoUsuario("Carla Rodríguez", "carla@ellaboutique.co", Rol.Vendedora, [Permiso.POS], true, "2026-09-23 09:02"),
-            NuevoUsuario("Sofía Parra", "sofia@ellaboutique.co", Rol.Vendedora, [Permiso.POS], true, "2026-09-22 18:45"),
-            NuevoUsuario("Valentina Ruiz", "vale@ellaboutique.co", Rol.Vendedora, [Permiso.POS], false, "2026-09-10 12:30"),
-            NuevoUsuario("Jorge Mejía", "jorge@ellaboutique.co", Rol.Bodega, [Permiso.Compras], true, "2026-09-23 07:58"),
-        }.ToDictionary(u => u.Nombre);
-        db.Usuarios.AddRange(usuarios.Values);
-        var ana = usuarios["Ana Martínez"];
+        // The system has a single user, the administrator: every sample purchase, sale and movement is hers
+        var ana = NuevoUsuario("Ana Martínez", "ana@ellaboutique.co", Rol.Administradora, todos, true, "2026-09-23 08:15");
+        db.Usuarios.Add(ana);
 
         // ---- Catálogo
         var categorias = new[]
@@ -212,7 +205,7 @@ public static class DbSeeder
                 Subtotal = total,
                 Total = total,
                 Notas = notas == "" ? null : notas,
-                Usuario = usuarios[usuario],
+                Usuario = ana,
                 CreadoEn = At(fecha),
                 Items =
                 [
@@ -226,14 +219,14 @@ public static class DbSeeder
                     },
                 ],
             };
-            movimientos.Add(Mov(At(fecha), TipoMovimiento.Entrada, prod, talla, cant, $"Compra {numero}", usuarios[usuario], compra: c));
+            movimientos.Add(Mov(At(fecha), TipoMovimiento.Entrada, prod, talla, cant, $"Compra {numero}", ana, compra: c));
             return c;
         }
         db.Compras.AddRange(
             NuevaCompra("OC-2026-044", "2026-09-21", "LuxFashion Ltda.", "LF-10233", "", "Jorge Mejía", "Cardigan Tejido Crema", "XL", 12, 72000),
             NuevaCompra("OC-2026-045", "2026-09-23", "Textiles Bogotá S.A.S.", "TB-8841", "Llegó completo", "Ana Martínez", "Vestido Floral Verano", "M", 20, 45000)
         );
-        movimientos.Add(Mov(At("2026-09-22 10:00"), TipoMovimiento.Salida, "Blusa Seda Negra", "S", -2, "Devolución proveedor", usuarios["Jorge Mejía"]));
+        movimientos.Add(Mov(At("2026-09-22 10:00"), TipoMovimiento.Salida, "Blusa Seda Negra", "S", -2, "Devolución proveedor", ana));
         movimientos.Add(Mov(At("2026-09-22 17:30"), TipoMovimiento.Ajuste, "Falda Plisada Beige", "L", -1, "AJ-0091", ana));
 
         // ---- Ventas
@@ -252,7 +245,7 @@ public static class DbSeeder
                 Fecha = At(fecha),
                 Tipo = TipoVenta.Tienda,
                 Cliente = clientes.GetValueOrDefault(cliente),
-                Vendedor = usuarios[vendedor],
+                Vendedor = ana,
                 MetodoPago = pago,
                 DescuentoPorcentaje = descuento,
                 Subtotal = subtotal,

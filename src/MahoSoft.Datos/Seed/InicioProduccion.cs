@@ -8,21 +8,22 @@ using Microsoft.Extensions.Logging;
 namespace MahoSoft.Datos.Seed;
 
 /// <summary>
-/// Settings of the "Inicial" section, read only when the database has no users yet: who the first administrator
-/// is. Set them as environment variables for the first start (Inicial__AdminEmail…) and remove them afterwards.
+/// Settings of the "Inicial" section, read only when the database has no users yet: the administrator, the system's
+/// only user. Set them as environment variables for the first start (Inicial__AdminEmail…) and remove them afterwards.
 /// </summary>
 public class InicialOptions
 {
     public const string Seccion = "Inicial";
 
     public string NombreNegocio { get; set; } = "Maho Boutique";
-    public string AdminNombre { get; set; } = "Administradora";
+    public string AdminNombre { get; set; } = "Administrador";
     public string AdminEmail { get; set; } = "";
     public string AdminPassword { get; set; } = "";
 }
 
 /// <summary>
-/// What a real (non-development) database needs to work: the settings the forms rely on and a first administrator.
+/// What a real (non-development) database needs to work: the settings the forms rely on and the administrator,
+/// the system's only user.
 /// No sample products, sales or users. Safe to run on every start: it only adds what is missing.
 /// </summary>
 public static class InicioProduccion
@@ -48,12 +49,12 @@ public static class InicioProduccion
 
         if (!await db.Usuarios.AnyAsync(ct))
         {
-            var admin = PrimeraAdministradora(inicial);
+            var admin = Administrador(inicial);
             admin.PasswordHash = hasher.HashPassword(admin, inicial.AdminPassword);
             db.Usuarios.Add(admin);
             await db.SaveChangesAsync(ct);
             logger.LogWarning(
-                "Se creó la primera administradora ({Email}). Quita las variables Inicial__AdminEmail e Inicial__AdminPassword.",
+                "Se creó la cuenta del administrador ({Email}). Quita las variables Inicial__AdminEmail e Inicial__AdminPassword.",
                 admin.Email
             );
         }
@@ -103,12 +104,12 @@ public static class InicioProduccion
     }
 
     /// <summary>Refuses to start with a weak or missing first password: the system would be open to anyone.</summary>
-    private static Usuario PrimeraAdministradora(InicialOptions inicial)
+    private static Usuario Administrador(InicialOptions inicial)
     {
         var email = inicial.AdminEmail.Trim().ToLowerInvariant();
         if (!MailAddress.TryCreate(email, out _))
             throw new ValidationException(
-                "La base de datos no tiene usuarios. Define Inicial__AdminEmail e Inicial__AdminPassword para crear la primera administradora."
+                "La base de datos no tiene usuarios. Define Inicial__AdminEmail e Inicial__AdminPassword para crear la cuenta del administrador."
             );
         if (inicial.AdminPassword.Length < PasswordMinimo || inicial.AdminPassword == "Maho2026!")
             throw new ValidationException(
@@ -117,7 +118,7 @@ public static class InicioProduccion
 
         return new Usuario
         {
-            Nombre = string.IsNullOrWhiteSpace(inicial.AdminNombre) ? "Administradora" : inicial.AdminNombre.Trim(),
+            Nombre = string.IsNullOrWhiteSpace(inicial.AdminNombre) ? "Administrador" : inicial.AdminNombre.Trim(),
             Email = email,
             Rol = Rol.Administradora,
             Activo = true,

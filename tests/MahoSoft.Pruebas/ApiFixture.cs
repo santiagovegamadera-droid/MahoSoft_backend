@@ -71,10 +71,6 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     public Task<HttpClient> AdminAsync() => ComoAsync("ana@ellaboutique.co");
 
-    public Task<HttpClient> VendedoraAsync() => ComoAsync("carla@ellaboutique.co");
-
-    public Task<HttpClient> BodegaAsync() => ComoAsync("jorge@ellaboutique.co");
-
     /// <summary>Runs a query that returns one value, straight on the test database.</summary>
     public static async Task<T> SqlAsync<T>(string sql)
     {

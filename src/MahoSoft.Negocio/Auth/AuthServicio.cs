@@ -54,7 +54,7 @@ public class AuthServicio(
             throw new NoAutenticadoException(CredencialesInvalidas);
 
         if (!usuario.Activo)
-            throw new AccesoDenegadoException("Tu usuario está desactivado. Pídele a la administradora que lo active.");
+            throw new AccesoDenegadoException("Tu usuario está desactivado.");
 
         if (resultado == PasswordVerificationResult.SuccessRehashNeeded)
             usuario.PasswordHash = hasher.HashPassword(usuario, req.Password);
@@ -85,7 +85,7 @@ public class AuthServicio(
     {
         if (!correo.Configurado)
             throw new ServicioNoDisponibleException(
-                "La recuperación por correo todavía no está configurada. Pídele a la administradora que te asigne una contraseña."
+                "La recuperación por correo todavía no está configurada (faltan los datos del correo en el servidor)."
             );
 
         var usuario = await usuarios.ObtenerPorEmailAsync(req.Email.Trim(), ct);

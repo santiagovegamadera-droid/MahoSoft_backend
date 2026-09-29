@@ -3,7 +3,10 @@ using System.Net.Http.Json;
 
 namespace MahoSoft.Pruebas;
 
-/// <summary>Who can do what: each role reaches its own screens only.</summary>
+/// <summary>
+/// Access: the system has a single user, the administrator, who reaches every screen; without a session nothing
+/// answers, and there is no way to create other users.
+/// </summary>
 [Collection(ApiCollection.Nombre)]
 public class PermisosPruebas(ApiFixture api)
 {
@@ -11,74 +14,47 @@ public class PermisosPruebas(ApiFixture api)
     [InlineData("/api/productos")]
     [InlineData("/api/ventas")]
     [InlineData("/api/configuracion")]
-    [InlineData("/api/usuarios")]
+    [InlineData("/api/perfil")]
     public async Task Sin_sesion_nada_responde(string url) =>
         Assert.Equal(HttpStatusCode.Unauthorized, (await api.CreateClient().GetAsync(url)).StatusCode);
 
     [Theory]
-    [InlineData("/api/compras")]
-    [InlineData("/api/proveedores")]
-    [InlineData("/api/usuarios")]
-    [InlineData("/api/reportes?desde=2026-01-01&hasta=2026-01-31")]
     [InlineData("/api/tablero")]
-    [InlineData("/api/inventario/movimientos")]
-    public async Task La_vendedora_no_entra_a_lo_que_no_es_del_POS(string url) =>
-        Assert.Equal(HttpStatusCode.Forbidden, (await (await api.VendedoraAsync()).GetAsync(url)).StatusCode);
-
-    [Theory]
     [InlineData("/api/productos")]
     [InlineData("/api/categorias")]
+    [InlineData("/api/proveedores")]
+    [InlineData("/api/compras")]
+    [InlineData("/api/ventas")]
+    [InlineData("/api/reportes?desde=2026-01-01&hasta=2026-01-31")]
+    [InlineData("/api/inventario/movimientos")]
     [InlineData("/api/configuracion")]
-    [InlineData("/api/ventas")]
-    public async Task La_vendedora_ve_lo_que_necesita_para_vender(string url) =>
-        Assert.Equal(HttpStatusCode.OK, (await (await api.VendedoraAsync()).GetAsync(url)).StatusCode);
-
-    [Theory]
-    [InlineData("/api/ventas")]
-    [InlineData("/api/usuarios")]
-    [InlineData("/api/tablero")]
-    public async Task Bodega_no_entra_a_ventas_usuarios_ni_inicio(string url) =>
-        Assert.Equal(HttpStatusCode.Forbidden, (await (await api.BodegaAsync()).GetAsync(url)).StatusCode);
+    [InlineData("/api/perfil")]
+    public async Task El_administrador_entra_a_todo(string url) =>
+        Assert.Equal(HttpStatusCode.OK, (await (await api.AdminAsync()).GetAsync(url)).StatusCode);
 
     [Fact]
-    public async Task Bodega_lee_proveedores_pero_no_los_cambia()
+    public async Task No_se_pueden_crear_ni_listar_otros_usuarios()
     {
-        var c = await api.BodegaAsync();
-        Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/api/proveedores")).StatusCode);
-        var crear = await c.PostAsJsonAsync("/api/proveedores", new { nombre = "X", tipoDocumento = "NIT", documento = "1", ivaPorcentaje = 0 });
-        Assert.Equal(HttpStatusCode.Forbidden, crear.StatusCode);
+        var c = await api.AdminAsync();
+        Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync("/api/usuarios")).StatusCode);
+        var crear = await c.PostAsJsonAsync(
+            "/api/usuarios",
+            new { nombre = "Otra", email = "otra@tienda.com", rol = "Administradora", password = "Una-Clave-Larga-1" }
+        );
+        Assert.Equal(HttpStatusCode.NotFound, crear.StatusCode);
+        Assert.Equal(1, await ApiFixture.SqlAsync<int>("SELECT COUNT(*) FROM Usuarios"));
     }
 
     [Fact]
-    public async Task Solo_la_administradora_cambia_la_configuracion()
-    {
-        var cuerpo = new { stockBajoProducto = 5, stockBajoTalla = 3 };
-        Assert.Equal(
-            HttpStatusCode.Forbidden,
-            (await (await api.BodegaAsync()).PutAsJsonAsync("/api/configuracion/inventario", cuerpo)).StatusCode
-        );
-        Assert.Equal(
-            HttpStatusCode.OK,
-            (await (await api.AdminAsync()).PutAsJsonAsync("/api/configuracion/inventario", cuerpo)).StatusCode
-        );
-    }
-
-    [Fact]
-    public async Task Nadie_se_desactiva_a_si_mismo()
+    public async Task El_administrador_edita_su_perfil()
     {
         var c = await api.AdminAsync();
         var r = await c.PutAsJsonAsync(
-            "/api/usuarios/1",
-            new
-            {
-                nombre = "Ana Martínez",
-                email = "ana@ellaboutique.co",
-                rol = "Administradora",
-                permisos = new[] { "Dashboard", "POS", "Compras", "Proveedores", "Usuarios", "Reportes" },
-                activo = false,
-            }
+            "/api/perfil",
+            new { nombre = "Ana Martínez", email = "ana@ellaboutique.co", telefono = "3001234567" }
         );
-        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        Assert.Equal("3001234567", (await r.LeerAsync())["telefono"]!.GetValue<string>());
     }
 
     [Fact]

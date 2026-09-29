@@ -115,7 +115,7 @@ public class InventarioPruebas(ApiFixture api)
     [Fact]
     public async Task Venta_usa_el_precio_del_servidor_descuenta_stock_y_valida_el_descuento()
     {
-        var c = await api.VendedoraAsync();
+        var c = await api.AdminAsync();
         var antes = await c.StockAsync(Falda, "S");
 
         var r = await c.MultipartAsync("/api/ventas", Venta(Falda, "S", 2, descuento: 10));
@@ -135,7 +135,7 @@ public class InventarioPruebas(ApiFixture api)
     public async Task No_se_vende_mas_de_lo_que_hay_aunque_varias_cajas_cobren_a_la_vez()
     {
         var admin = await api.AdminAsync();
-        var caja = await api.VendedoraAsync();
+        var caja = await api.AdminAsync();
         // Leave exactly 2 units of Falda XS
         var ajuste = await admin.PostAsJsonAsync(
             "/api/inventario/ajustes",
@@ -156,7 +156,7 @@ public class InventarioPruebas(ApiFixture api)
     [Fact]
     public async Task Anular_devuelve_el_stock_y_no_se_anula_dos_veces()
     {
-        var c = await api.VendedoraAsync();
+        var c = await api.AdminAsync();
         var antes = await c.StockAsync(Falda, "L");
         var venta = await (await c.MultipartAsync("/api/ventas", Venta(Falda, "L", 1))).LeerAsync();
         var id = venta["id"]!.GetValue<int>();
@@ -166,7 +166,7 @@ public class InventarioPruebas(ApiFixture api)
 
         var anulada = await (await c.PostAsJsonAsync($"/api/ventas/{id}/anular", new { motivo = "Prueba" })).LeerAsync();
         Assert.Equal("Anulada", anulada["estado"]!.GetValue<string>());
-        Assert.Equal("Carla Rodríguez", anulada["anuladaPor"]!.GetValue<string>());
+        Assert.Equal("Ana Martínez", anulada["anuladaPor"]!.GetValue<string>());
         Assert.Equal(antes, await c.StockAsync(Falda, "L"));
 
         Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync($"/api/ventas/{id}/anular", new { motivo = "Otra" })).StatusCode);
