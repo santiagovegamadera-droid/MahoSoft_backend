@@ -1,11 +1,10 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
-using MahoSoft.Api.Data;
-using MahoSoft.Api.Data.Entities;
+using MahoSoft.Entidades;
+using MahoSoft.Negocio.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace MahoSoft.Api.Auth;
@@ -13,6 +12,13 @@ namespace MahoSoft.Api.Auth;
 public static class RateLimits
 {
     public const string Login = "login";
+}
+
+/// <summary>Policies that accept any of several permissions, for data that more than one module reads.</summary>
+public static class Politicas
+{
+    /// <summary>Suppliers: their own screen, and Compras, which picks one for each purchase.</summary>
+    public const string VerProveedores = "VerProveedores";
 }
 
 public static class AuthSetup
@@ -53,6 +59,10 @@ public static class AuthSetup
             o.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
             foreach (var permiso in Enum.GetValues<Permiso>())
                 o.AddPolicy(permiso.ToString(), p => p.RequireClaim(Claims.Permiso, permiso.ToString()));
+            o.AddPolicy(
+                Politicas.VerProveedores,
+                p => p.RequireClaim(Claims.Permiso, nameof(Permiso.Proveedores), nameof(Permiso.Compras))
+            );
         });
 
         services.AddRateLimiter(o =>
@@ -87,10 +97,10 @@ public static class AuthSetup
     /// </summary>
     private static async Task RefrescarDesdeBaseDeDatos(TokenValidatedContext ctx)
     {
-        var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+        var auth = ctx.HttpContext.RequestServices.GetRequiredService<IAuthServicio>();
         var id = int.Parse(ctx.Principal!.FindFirstValue(Claims.Id)!);
-        var usuario = await db.Usuarios.AsNoTracking().Include(u => u.Permisos).SingleOrDefaultAsync(u => u.Id == id);
-        if (usuario is null || !usuario.Activo)
+        var usuario = await auth.ObtenerSesionActivaAsync(id, ctx.HttpContext.RequestAborted);
+        if (usuario is null)
         {
             ctx.Fail("Usuario inexistente o desactivado");
             return;
