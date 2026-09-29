@@ -104,6 +104,8 @@ public class ProductoServicio(
         CancellationToken ct = default
     )
     {
+        if (!imagenes.Configurado)
+            throw new ServicioNoDisponibleException("La subida de fotos todavía no está configurada (faltan las claves de Cloudinary)");
         if (!TiposImagen.Contains(tipoMime))
             throw new ValidacionException("La imagen debe ser JPG, PNG o WebP");
         if (tamano == 0)

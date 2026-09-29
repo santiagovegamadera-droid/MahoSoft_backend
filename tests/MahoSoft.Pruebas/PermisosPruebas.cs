@@ -82,6 +82,15 @@ public class PermisosPruebas(ApiFixture api)
     }
 
     [Fact]
+    public async Task Sin_Cloudinary_los_productos_se_listan_y_subir_fotos_responde_503()
+    {
+        var c = await api.AdminAsync();
+        Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/api/productos")).StatusCode);
+        var foto = new MultipartFormDataContent { { new ByteArrayContent([0x89, 0x50, 0x4E, 0x47]), "archivo", "foto.png" } };
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await c.PostAsync("/api/productos/imagenes", foto)).StatusCode);
+    }
+
+    [Fact]
     public async Task Sin_correo_configurado_recuperar_la_contrasena_responde_503()
     {
         var r = await api.CreateClient().PostAsJsonAsync("/api/auth/recuperar-password", new { email = "ana@ellaboutique.co" });

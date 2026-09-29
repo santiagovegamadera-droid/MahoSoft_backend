@@ -8,6 +8,20 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Outside development the settings come from environment variables (see README, "Publicar"). Stop right away when
+// one is missing instead of starting half configured.
+if (!builder.Environment.IsDevelopment())
+{
+    string[] faltan =
+    [
+        .. string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("MahoSoft")) ? ["ConnectionStrings__MahoSoft"] : Array.Empty<string>(),
+        .. (builder.Configuration.GetSection("Cors:Origenes").Get<string[]>() ?? []).Length == 0 ? ["Cors__Origenes__0"] : Array.Empty<string>(),
+        .. string.IsNullOrWhiteSpace(builder.Configuration["App:UrlFrontend"]) ? ["App__UrlFrontend"] : Array.Empty<string>(),
+    ];
+    if (faltan.Length > 0)
+        throw new InvalidOperationException($"Faltan variables de entorno de producción: {string.Join(", ", faltan)}");
+}
+
 builder.Services.AddNegocio(builder.Configuration);
 builder.Services.AddMahoAuth(builder.Configuration);
 
@@ -36,6 +50,13 @@ if (app.Environment.IsDevelopment())
 
     // Local development: bring the database up to date and load the sample data on first run
     await app.Services.PrepararBaseDeDatosAsync();
+}
+else
+{
+    // Production: bring the database up to date; a new one gets the basic settings and the first administrator
+    await app.Services.PrepararProduccionAsync(app.Configuration);
+    // Browsers only talk to this API over HTTPS from now on
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();

@@ -43,4 +43,11 @@ public static class NegocioSetup
 
     /// <summary>Brings the database up to date and loads the sample data if it is empty (local development only).</summary>
     public static Task PrepararBaseDeDatosAsync(this IServiceProvider services) => services.MigrarYSembrarAsync();
+
+    /// <summary>
+    /// Production: brings the database up to date and, when it is new, creates the basic settings and the first
+    /// administrator (section "Inicial"). No sample data.
+    /// </summary>
+    public static Task PrepararProduccionAsync(this IServiceProvider services, IConfiguration config) =>
+        services.MigrarProduccionAsync(config);
 }

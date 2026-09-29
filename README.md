@@ -51,7 +51,7 @@ Reglas generales:
 
 ## Cómo levantarlo en local
 
-Requisitos: .NET 9 SDK y SQL Server en `localhost` con autenticación de Windows (la cadena de conexión está en `appsettings.json`, clave `ConnectionStrings:MahoSoft`).
+Requisitos: .NET 9 SDK y SQL Server en `localhost` con autenticación de Windows (la cadena de conexión está en `appsettings.Development.json`, clave `ConnectionStrings:MahoSoft`).
 
 La primera vez, crea la clave secreta con la que se firman las sesiones (no se guarda en el repositorio):
 
@@ -94,6 +94,48 @@ Para cambiar el modelo:
 ```bash
 dotnet ef migrations add NombreDelCambio --project src/MahoSoft.Datos --startup-project src/MahoSoft.Api --output-dir Migrations
 ```
+
+## Publicar (producción)
+
+Sirve para cualquier proveedor (Azure, un VPS, un servidor propio con IIS…). Fuera de desarrollo **no se cargan datos de ejemplo** y toda la configuración sale de **variables de entorno**; en el código y en `appsettings.json` no hay secretos. La configuración local (base, CORS, dirección del frontend) está solo en `appsettings.Development.json`.
+
+### Variables de entorno de la API
+
+| Variable | Obligatoria | Para qué |
+| --- | --- | --- |
+| `ASPNETCORE_ENVIRONMENT` | sí | `Production` |
+| `ConnectionStrings__MahoSoft` | sí | Cadena de conexión a SQL Server |
+| `Jwt__Key` | sí | Clave para firmar las sesiones: al menos 32 caracteres aleatorios, distinta a la de desarrollo |
+| `Cors__Origenes__0` | sí | Dirección exacta del frontend, con `https://` (más orígenes: `__1`, `__2`…) |
+| `App__UrlFrontend` | sí | La misma dirección del frontend; va en el enlace para recuperar la contraseña |
+| `Inicial__AdminEmail`, `Inicial__AdminPassword`, `Inicial__AdminNombre` | solo el primer arranque | Primera administradora (contraseña de al menos 12 caracteres). Quitarlas después |
+| `Inicial__NombreNegocio` | no | Nombre del negocio al crear la base (se cambia luego en Configuración) |
+| `Archivos__Carpeta` | recomendada | Carpeta de las facturas y comprobantes, en un disco con copia de seguridad |
+| `Cloudinary__CloudName`, `Cloudinary__ApiKey`, `Cloudinary__ApiSecret` | para subir fotos | Sin ellas todo funciona, pero subir fotos responde "no está configurado" |
+| `Correo__Usuario`, `Correo__Password` | para enviar correos | Gmail y contraseña de aplicación; sin ellas no salen facturas por correo ni enlaces de contraseña |
+| `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | detrás de un proxy | `true` si HTTPS lo termina un proxy o el proveedor (Azure App Service, Nginx…) |
+
+Si falta una obligatoria, la API **no arranca** y el error dice cuál falta.
+
+### Primer arranque
+
+1. Crear la base vacía en SQL Server (solo la base: las tablas las crea la API).
+2. Definir las variables, incluidas las `Inicial__…`, y arrancar la API. Al iniciar aplica las migraciones y, en una base nueva, crea la configuración básica (tipos de documento, tallas, bancos, descuentos del POS, umbrales de stock) y la primera administradora con todos los permisos. En cada arranque vuelve a aplicar las migraciones pendientes y no toca los datos existentes.
+3. Entrar con esa cuenta, cambiar la contraseña si se quiere, completar **Configuración → Datos del negocio** y crear los demás usuarios en **Usuarios**.
+4. Quitar las variables `Inicial__…`.
+
+Compilar la API: `dotnet publish src/MahoSoft.Api -c Release -o publicar` y subir la carpeta `publicar`.
+
+### Frontend
+
+Es un sitio estático. Se compila con la dirección pública de la API y se sube la carpeta `dist` a cualquier hosting estático (Azure Static Web Apps, Netlify, IIS…):
+
+```bash
+cd frontend
+VITE_API_URL=https://api.tudominio.com npm run build
+```
+
+(En PowerShell: `$env:VITE_API_URL="https://api.tudominio.com"; npm run build`.) El dominio del frontend debe estar en `Cors__Origenes__0` y en `App__UrlFrontend` de la API, y ambos deben servirse con HTTPS: la API responde con HSTS fuera de desarrollo.
 
 ## Pruebas automáticas
 

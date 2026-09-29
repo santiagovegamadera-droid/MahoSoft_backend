@@ -28,6 +28,9 @@ public record ImagenSubida(string Url, string PublicId, long Tamano);
 /// <summary>Product photos, stored outside the database.</summary>
 public interface IAlmacenImagenes
 {
+    /// <summary>Whether the Cloudinary keys are set; without them photos can't be uploaded, but everything else works.</summary>
+    bool Configurado { get; }
+
     Task<ImagenSubida> SubirAsync(Stream contenido, string nombre, CancellationToken ct = default);
 
     /// <summary>Removes an image; a failure is logged, not thrown (the database is already consistent).</summary>
@@ -38,12 +41,18 @@ public class CloudinaryAlmacen(IOptions<CloudinaryOptions> options, ILogger<Clou
 {
     private const string Carpeta = "mahosoft/productos";
 
-    private readonly Cloudinary _cloudinary = new(
-        new Account(options.Value.CloudName, options.Value.ApiKey, options.Value.ApiSecret)
-    )
-    {
-        Api = { Secure = true },
-    };
+    // Created on first use, so a missing key only affects uploading photos, never listing products
+    private readonly Lazy<Cloudinary> _cloudinary = new(() =>
+        new Cloudinary(new Account(options.Value.CloudName, options.Value.ApiKey, options.Value.ApiSecret))
+        {
+            Api = { Secure = true },
+        }
+    );
+
+    public bool Configurado =>
+        !string.IsNullOrWhiteSpace(options.Value.CloudName)
+        && !string.IsNullOrWhiteSpace(options.Value.ApiKey)
+        && !string.IsNullOrWhiteSpace(options.Value.ApiSecret);
 
     public async Task<ImagenSubida> SubirAsync(Stream contenido, string nombre, CancellationToken ct = default)
     {
@@ -54,7 +63,7 @@ public class CloudinaryAlmacen(IOptions<CloudinaryOptions> options, ILogger<Clou
             // Store at most 1200 px per side: enough for the catalog, and uploads from a phone stay small
             Transformation = new Transformation().Width(1200).Height(1200).Crop("limit"),
         };
-        var resultado = await _cloudinary.UploadAsync(parametros, ct);
+        var resultado = await _cloudinary.Value.UploadAsync(parametros, ct);
         if (resultado.Error is not null || resultado.StatusCode != HttpStatusCode.OK)
         {
             logger.LogError("Cloudinary rechazó la imagen {Nombre}: {Error}", nombre, resultado.Error?.Message);
@@ -65,9 +74,14 @@ public class CloudinaryAlmacen(IOptions<CloudinaryOptions> options, ILogger<Clou
 
     public async Task EliminarAsync(string publicId)
     {
+        if (!Configurado)
+        {
+            logger.LogWarning("Cloudinary no está configurado: no se borró {PublicId}", publicId);
+            return;
+        }
         try
         {
-            var resultado = await _cloudinary.DestroyAsync(new DeletionParams(publicId));
+            var resultado = await _cloudinary.Value.DestroyAsync(new DeletionParams(publicId));
             if (resultado.Error is not null)
                 logger.LogWarning("No se pudo borrar {PublicId} de Cloudinary: {Error}", publicId, resultado.Error.Message);
         }

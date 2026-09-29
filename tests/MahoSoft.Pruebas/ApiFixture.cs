@@ -28,9 +28,12 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseEnvironment("Development");
         builder.UseSetting("ConnectionStrings:MahoSoft", Conexion);
         builder.UseSetting("Archivos:Carpeta", Path.Combine(Path.GetTempPath(), "mahosoft-pruebas-archivos"));
-        // No email server in the tests
+        // No email server nor Cloudinary in the tests: the API must work without them
         builder.UseSetting("Correo:Usuario", "");
         builder.UseSetting("Correo:Remitente", "");
+        builder.UseSetting("Cloudinary:CloudName", "");
+        builder.UseSetting("Cloudinary:ApiKey", "");
+        builder.UseSetting("Cloudinary:ApiSecret", "");
     }
 
     public async Task InitializeAsync()
