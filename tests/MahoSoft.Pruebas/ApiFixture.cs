@@ -4,19 +4,19 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 
 namespace MahoSoft.Pruebas;
 
 /// <summary>
 /// The whole API running in memory against its own database (MahoSoft_Pruebas), recreated with the sample data on
-/// every run, so the development database is never touched. Requires SQL Server on localhost, like the API.
+/// every run, so the development database is never touched. Requires PostgreSQL on localhost, like the API.
 /// </summary>
 public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private const string Base = "MahoSoft_Pruebas";
-    public const string Conexion = $"Server=localhost;Database={Base};Trusted_Connection=True;TrustServerCertificate=True";
-    private const string Master = "Server=localhost;Database=master;Trusted_Connection=True;TrustServerCertificate=True";
+    private const string Base = "mahosoft_pruebas";
+    public const string Conexion = $"Host=localhost;Database={Base};Username=postgres;Password=postgres";
+    private const string Servidor = "Host=localhost;Database=postgres;Username=postgres;Password=postgres";
     public const string Password = "Maho2026!";
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -38,17 +38,11 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await using (var cn = new SqlConnection(Master))
+        await using (var cn = new NpgsqlConnection(Servidor))
         {
             await cn.OpenAsync();
             await using var cmd = cn.CreateCommand();
-            cmd.CommandText = $"""
-                IF DB_ID('{Base}') IS NOT NULL
-                BEGIN
-                    ALTER DATABASE [{Base}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-                    DROP DATABASE [{Base}];
-                END
-                """;
+            cmd.CommandText = $"DROP DATABASE IF EXISTS {Base} WITH (FORCE)";
             await cmd.ExecuteNonQueryAsync();
         }
         _ = Server; // starts the API, which creates the database
@@ -74,7 +68,7 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Runs a query that returns one value, straight on the test database.</summary>
     public static async Task<T> SqlAsync<T>(string sql)
     {
-        await using var cn = new SqlConnection(Conexion);
+        await using var cn = new NpgsqlConnection(Conexion);
         await cn.OpenAsync();
         await using var cmd = cn.CreateCommand();
         cmd.CommandText = sql;

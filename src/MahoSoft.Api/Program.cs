@@ -17,6 +17,9 @@ if (!builder.Environment.IsDevelopment())
         .. string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("MahoSoft")) ? ["ConnectionStrings__MahoSoft"] : Array.Empty<string>(),
         .. (builder.Configuration.GetSection("Cors:Origenes").Get<string[]>() ?? []).Length == 0 ? ["Cors__Origenes__0"] : Array.Empty<string>(),
         .. string.IsNullOrWhiteSpace(builder.Configuration["App:UrlFrontend"]) ? ["App__UrlFrontend"] : Array.Empty<string>(),
+        // Hosts like Render wipe the disk on every deploy: invoices and receipts must go to Supabase Storage
+        .. string.IsNullOrWhiteSpace(builder.Configuration["Supabase:Url"]) ? ["Supabase__Url"] : Array.Empty<string>(),
+        .. string.IsNullOrWhiteSpace(builder.Configuration["Supabase:ServiceKey"]) ? ["Supabase__ServiceKey"] : Array.Empty<string>(),
     ];
     if (faltan.Length > 0)
         throw new InvalidOperationException($"Faltan variables de entorno de producción: {string.Join(", ", faltan)}");

@@ -57,7 +57,7 @@ public class CompraServicio(
         var compra = await ArmarAsync(req, usuarioId, ct);
         var archivo = documento is null ? null : await Documentos.LeerAsync(documento, "El documento", ct);
 
-        // The file goes to disk first; if the database part fails, it is removed again
+        // The file is stored first; if the database part fails, it is removed again
         string? ruta = null;
         if (archivo is not null)
         {
@@ -68,7 +68,7 @@ public class CompraServicio(
                 Nombre = Path.GetFileName(documento!.Nombre),
                 TipoMime = archivo.TipoMime,
                 Tamano = archivo.Bytes.Length,
-                Almacen = AlmacenArchivo.Local,
+                Almacen = documentos.Almacen,
                 Ubicacion = ruta,
                 SubidoEn = DateTimeOffset.UtcNow,
             };
@@ -92,7 +92,7 @@ public class CompraServicio(
         catch
         {
             if (ruta is not null)
-                documentos.Eliminar(ruta);
+                await documentos.EliminarAsync(ruta);
             throw;
         }
         return await ObtenerAsync(compra.Id, ct);
@@ -112,7 +112,7 @@ public class CompraServicio(
         if (compra.Documento is null)
             throw new NoEncontradoException("Esta compra no tiene documento adjunto");
         var contenido =
-            documentos.Abrir(compra.Documento.Ubicacion)
+            await documentos.AbrirAsync(compra.Documento.Ubicacion, ct)
             ?? throw new NoEncontradoException("El documento ya no está en el servidor");
         return new DocumentoArchivo(contenido, compra.Documento.Nombre, compra.Documento.TipoMime);
     }

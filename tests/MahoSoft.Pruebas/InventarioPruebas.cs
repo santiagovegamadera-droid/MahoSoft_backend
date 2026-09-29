@@ -198,9 +198,9 @@ public class InventarioPruebas(ApiFixture api)
         await api.AdminAsync();
         var descuadres = await ApiFixture.SqlAsync<int>(
             """
-            SELECT COUNT(*) FROM ProductoTallas pt
-            WHERE pt.Stock <> (SELECT ISNULL(SUM(m.Cantidad), 0) FROM MovimientosInventario m
-                               WHERE m.ProductoId = pt.ProductoId AND m.TallaId = pt.TallaId)
+            SELECT COUNT(*) FROM "ProductoTallas" pt
+            WHERE pt."Stock" <> (SELECT COALESCE(SUM(m."Cantidad"), 0) FROM "MovimientosInventario" m
+                                 WHERE m."ProductoId" = pt."ProductoId" AND m."TallaId" = pt."TallaId")
             """
         );
         Assert.Equal(0, descuadres);

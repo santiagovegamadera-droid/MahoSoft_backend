@@ -15,7 +15,7 @@ public interface IVentaRepositorio
 
     /// <summary>
     /// Next invoice number after the highest <c>{prefijo}NNNN</c> (e.g. VTA-2026-0847). Must run inside a
-    /// transaction: the rows read stay locked until it ends, so two tills can't get the same number.
+    /// transaction: numbering stays locked until it ends, so two tills can't get the same number.
     /// </summary>
     Task<string> SiguienteNumeroAsync(string prefijo, CancellationToken ct = default);
 
@@ -50,10 +50,11 @@ public class VentaRepositorio(AppDbContext db) : IVentaRepositorio
 
     public async Task<string> SiguienteNumeroAsync(string prefijo, CancellationToken ct = default)
     {
-        // UPDLOCK + HOLDLOCK lock the matching range until the transaction ends, including "no rows yet"
-        var numeros = await db.Database.SqlQuery<string>(
-                $"SELECT NumeroFactura AS Value FROM Ventas WITH (UPDLOCK, HOLDLOCK) WHERE NumeroFactura LIKE {prefijo + "%"}"
-            )
+        // Held until the transaction ends, also when there is no sale yet to lock
+        await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock({Bloqueos.NumeroVenta})", ct);
+        var numeros = await db.Ventas
+            .Where(v => v.NumeroFactura.StartsWith(prefijo))
+            .Select(v => v.NumeroFactura)
             .ToListAsync(ct);
         var ultimo = numeros.Select(n => int.TryParse(n[prefijo.Length..], out var x) ? x : 0).DefaultIfEmpty(0).Max();
         return $"{prefijo}{ultimo + 1:0000}";

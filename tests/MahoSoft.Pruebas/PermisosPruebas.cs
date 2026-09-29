@@ -42,7 +42,7 @@ public class PermisosPruebas(ApiFixture api)
             new { nombre = "Otra", email = "otra@tienda.com", rol = "Administradora", password = "Una-Clave-Larga-1" }
         );
         Assert.Equal(HttpStatusCode.NotFound, crear.StatusCode);
-        Assert.Equal(1, await ApiFixture.SqlAsync<int>("SELECT COUNT(*) FROM Usuarios"));
+        Assert.Equal(1, await ApiFixture.SqlAsync<int>("SELECT COUNT(*) FROM \"Usuarios\""));
     }
 
     [Fact]

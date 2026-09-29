@@ -14,7 +14,7 @@ public class ClienteConfig : IEntityTypeConfiguration<Cliente>
         e.Property(x => x.Correo).HasMaxLength(256);
         e.HasOne(x => x.TipoDocumento).WithMany().HasForeignKey(x => x.TipoDocumentoId);
         // One customer per document; customers without a document can repeat
-        e.HasIndex(x => new { x.TipoDocumentoId, x.Documento }).IsUnique().HasFilter("[Documento] IS NOT NULL");
+        e.HasIndex(x => new { x.TipoDocumentoId, x.Documento }).IsUnique().HasFilter("\"Documento\" IS NOT NULL");
         e.HasIndex(x => x.Telefono);
     }
 }
@@ -25,12 +25,12 @@ public class VentaConfig : IEntityTypeConfiguration<Venta>
     {
         e.ToTable(t =>
         {
-            t.HasCheckConstraint("CK_Ventas_Descuento", "[DescuentoPorcentaje] BETWEEN 0 AND 100");
-            t.HasCheckConstraint("CK_Ventas_Montos", "[Envio] >= 0 AND [Subtotal] >= 0 AND [Descuento] >= 0 AND [Total] >= 0");
+            t.HasCheckConstraint("CK_Ventas_Descuento", "\"DescuentoPorcentaje\" BETWEEN 0 AND 100");
+            t.HasCheckConstraint("CK_Ventas_Montos", "\"Envio\" >= 0 AND \"Subtotal\" >= 0 AND \"Descuento\" >= 0 AND \"Total\" >= 0");
             // A voided sale records when it was voided and by whom
             t.HasCheckConstraint(
                 "CK_Ventas_Anulacion",
-                "[Estado] <> 'Anulada' OR ([AnuladaEn] IS NOT NULL AND [AnuladaPorId] IS NOT NULL)"
+                "\"Estado\" <> 'Anulada' OR (\"AnuladaEn\" IS NOT NULL AND \"AnuladaPorId\" IS NOT NULL)"
             );
         });
         e.Property(x => x.NumeroFactura).HasMaxLength(20);
@@ -53,8 +53,8 @@ public class VentaItemConfig : IEntityTypeConfiguration<VentaItem>
     {
         e.ToTable(t =>
         {
-            t.HasCheckConstraint("CK_VentaItems_Cantidad", "[Cantidad] > 0");
-            t.HasCheckConstraint("CK_VentaItems_Precios", "[PrecioUnitario] >= 0 AND [CostoUnitario] >= 0");
+            t.HasCheckConstraint("CK_VentaItems_Cantidad", "\"Cantidad\" > 0");
+            t.HasCheckConstraint("CK_VentaItems_Precios", "\"PrecioUnitario\" >= 0 AND \"CostoUnitario\" >= 0");
         });
         e.Property(x => x.NombreProducto).HasMaxLength(150);
         e.HasOne(x => x.Producto).WithMany().HasForeignKey(x => x.ProductoId);
@@ -89,7 +89,7 @@ public class MovimientoInventarioConfig : IEntityTypeConfiguration<MovimientoInv
 {
     public void Configure(EntityTypeBuilder<MovimientoInventario> e)
     {
-        e.ToTable("MovimientosInventario", t => t.HasCheckConstraint("CK_MovimientosInventario_Cantidad", "[Cantidad] <> 0"));
+        e.ToTable("MovimientosInventario", t => t.HasCheckConstraint("CK_MovimientosInventario_Cantidad", "\"Cantidad\" <> 0"));
         e.Property(x => x.Motivo).HasMaxLength(200);
         e.HasIndex(x => new { x.ProductoId, x.TallaId });
         e.HasIndex(x => x.Fecha);

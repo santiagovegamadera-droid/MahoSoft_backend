@@ -58,11 +58,15 @@ public enum TipoMovimiento
     Ajuste,
 }
 
-/// <summary>Where a file lives: product photos in Cloudinary, invoice PDFs on the server disk.</summary>
+/// <summary>
+/// Where a file lives: product photos in Cloudinary; invoice PDFs and transfer receipts in Supabase Storage, or on the
+/// server disk when it is not configured (local development).
+/// </summary>
 public enum AlmacenArchivo
 {
     Cloudinary,
     Local,
+    Supabase,
     /// <summary>A plain external URL (only the sample data uses it).</summary>
     Externo,
 }

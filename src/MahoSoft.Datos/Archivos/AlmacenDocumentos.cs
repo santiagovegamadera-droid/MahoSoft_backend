@@ -1,3 +1,4 @@
+using MahoSoft.Entidades;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -13,23 +14,36 @@ public class ArchivosOptions
     public string Carpeta { get; set; } = "App_Data/archivos";
 }
 
-/// <summary>Documents stored on the server disk. Paths are relative to the configured folder.</summary>
+/// <summary>Documents (supplier invoices, transfer receipts). Paths are relative to the storage root.</summary>
 public interface IAlmacenDocumentos
 {
+    /// <summary>Where the files saved from now on go, recorded on each <see cref="Archivo"/>.</summary>
+    AlmacenArchivo Almacen { get; }
+
     /// <summary>Saves the content under a new name (the user's file name is never used as a path).</summary>
     Task<string> GuardarAsync(Stream contenido, string subcarpeta, string extension, CancellationToken ct = default);
 
-    /// <summary>The stored file, or null if it is no longer on disk.</summary>
-    Stream? Abrir(string ruta);
+    /// <summary>The stored file, or null if it is no longer there.</summary>
+    Task<Stream?> AbrirAsync(string ruta, CancellationToken ct = default);
 
     /// <summary>Deletes a file; a failure is logged, not thrown.</summary>
-    void Eliminar(string ruta);
+    Task EliminarAsync(string ruta);
+
+    /// <summary>New stored name: subfolder/yyyy/MM/random + extension.</summary>
+    static string NuevaRuta(string subcarpeta, string extension)
+    {
+        var hoy = DateTime.UtcNow;
+        return $"{subcarpeta}/{hoy:yyyy}/{hoy:MM}/{Guid.NewGuid():N}{extension}";
+    }
 }
 
+/// <summary>Documents on the server disk, under the configured folder.</summary>
 public class DiscoAlmacen(IOptions<ArchivosOptions> options, IHostEnvironment env, ILogger<DiscoAlmacen> logger)
     : IAlmacenDocumentos
 {
     private readonly string _raiz = Path.GetFullPath(Path.Combine(env.ContentRootPath, options.Value.Carpeta));
+
+    public AlmacenArchivo Almacen => AlmacenArchivo.Local;
 
     public async Task<string> GuardarAsync(
         Stream contenido,
@@ -38,22 +52,21 @@ public class DiscoAlmacen(IOptions<ArchivosOptions> options, IHostEnvironment en
         CancellationToken ct = default
     )
     {
-        var hoy = DateTime.UtcNow;
-        var ruta = Path.Combine(subcarpeta, hoy.ToString("yyyy"), hoy.ToString("MM"), $"{Guid.NewGuid():N}{extension}");
+        var ruta = IAlmacenDocumentos.NuevaRuta(subcarpeta, extension);
         var completa = Completa(ruta);
         Directory.CreateDirectory(Path.GetDirectoryName(completa)!);
         await using (var destino = new FileStream(completa, FileMode.CreateNew))
             await contenido.CopyToAsync(destino, ct);
-        return ruta.Replace('\\', '/');
+        return ruta;
     }
 
-    public Stream? Abrir(string ruta)
+    public Task<Stream?> AbrirAsync(string ruta, CancellationToken ct = default)
     {
         var completa = Completa(ruta);
-        return File.Exists(completa) ? File.OpenRead(completa) : null;
+        return Task.FromResult<Stream?>(File.Exists(completa) ? File.OpenRead(completa) : null);
     }
 
-    public void Eliminar(string ruta)
+    public Task EliminarAsync(string ruta)
     {
         try
         {
@@ -63,6 +76,7 @@ public class DiscoAlmacen(IOptions<ArchivosOptions> options, IHostEnvironment en
         {
             logger.LogWarning(e, "No se pudo borrar el archivo {Ruta}", ruta);
         }
+        return Task.CompletedTask;
     }
 
     // Stored paths come from GuardarAsync, but never let one point outside the folder

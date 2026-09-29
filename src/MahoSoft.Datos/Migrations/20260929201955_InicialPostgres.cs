@@ -1,44 +1,48 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace MahoSoft.Datos.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InicialPostgres : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:CollationDefinition:sin_mayusculas", "und-u-ks-level2,und-u-ks-level2,icu,False");
+
             migrationBuilder.CreateTable(
                 name: "Archivos",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Nombre = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    TipoMime = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    TipoMime = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Tamano = table.Column<long>(type: "bigint", nullable: false),
-                    Almacen = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    Ubicacion = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
-                    PublicId = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    SubidoEn = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    Almacen = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    Ubicacion = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    PublicId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    SubidoEn = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Archivos", x => x.Id);
-                    table.CheckConstraint("CK_Archivos_Tamano", "[Tamano] >= 0");
+                    table.CheckConstraint("CK_Archivos_Tamano", "\"Tamano\" >= 0");
                 });
 
             migrationBuilder.CreateTable(
                 name: "Bancos",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Orden = table.Column<int>(type: "int", nullable: false),
-                    Activo = table.Column<bool>(type: "bit", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false, collation: "sin_mayusculas"),
+                    Orden = table.Column<int>(type: "integer", nullable: false),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -49,11 +53,11 @@ namespace MahoSoft.Datos.Migrations
                 name: "Categorias",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Descripcion = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    Activo = table.Column<bool>(type: "bit", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false, collation: "sin_mayusculas"),
+                    Descripcion = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -64,24 +68,24 @@ namespace MahoSoft.Datos.Migrations
                 name: "DescuentosPos",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Porcentaje = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Porcentaje = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_DescuentosPos", x => x.Id);
-                    table.CheckConstraint("CK_DescuentosPos_Rango", "[Porcentaje] BETWEEN 0 AND 100");
+                    table.CheckConstraint("CK_DescuentosPos_Rango", "\"Porcentaje\" BETWEEN 0 AND 100");
                 });
 
             migrationBuilder.CreateTable(
                 name: "GruposTalla",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Orden = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, collation: "sin_mayusculas"),
+                    Orden = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -92,34 +96,34 @@ namespace MahoSoft.Datos.Migrations
                 name: "Negocio",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false),
-                    Nombre = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Nit = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    Direccion = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    Ciudad = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    Telefono = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    Correo = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Instagram = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    MensajeRecibo = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    StockBajoProducto = table.Column<int>(type: "int", nullable: false),
-                    StockBajoTalla = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    Nit = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    Direccion = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    Ciudad = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    Telefono = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    Correo = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    Instagram = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    MensajeRecibo = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    StockBajoProducto = table.Column<int>(type: "integer", nullable: false),
+                    StockBajoTalla = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Negocio", x => x.Id);
-                    table.CheckConstraint("CK_Negocio_Umbrales", "[StockBajoProducto] >= 0 AND [StockBajoTalla] >= 0");
-                    table.CheckConstraint("CK_Negocio_UnaFila", "[Id] = 1");
+                    table.CheckConstraint("CK_Negocio_Umbrales", "\"StockBajoProducto\" >= 0 AND \"StockBajoTalla\" >= 0");
+                    table.CheckConstraint("CK_Negocio_UnaFila", "\"Id\" = 1");
                 });
 
             migrationBuilder.CreateTable(
                 name: "TiposDocumento",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Codigo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Orden = table.Column<int>(type: "int", nullable: false),
-                    Activo = table.Column<bool>(type: "bit", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Codigo = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, collation: "sin_mayusculas"),
+                    Orden = table.Column<int>(type: "integer", nullable: false),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -130,22 +134,22 @@ namespace MahoSoft.Datos.Migrations
                 name: "Productos",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    CategoriaId = table.Column<int>(type: "int", nullable: false),
-                    PrecioVenta = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    CostoActual = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Descripcion = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    ImagenId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    Activo = table.Column<bool>(type: "bit", nullable: false),
-                    CreadoEn = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    CategoriaId = table.Column<int>(type: "integer", nullable: false),
+                    PrecioVenta = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    CostoActual = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Descripcion = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    ImagenId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false),
+                    CreadoEn = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Productos", x => x.Id);
-                    table.CheckConstraint("CK_Productos_CostoActual", "[CostoActual] >= 0");
-                    table.CheckConstraint("CK_Productos_PrecioVenta", "[PrecioVenta] >= 0");
+                    table.CheckConstraint("CK_Productos_CostoActual", "\"CostoActual\" >= 0");
+                    table.CheckConstraint("CK_Productos_PrecioVenta", "\"PrecioVenta\" >= 0");
                     table.ForeignKey(
                         name: "FK_Productos_Archivos_ImagenId",
                         column: x => x.ImagenId,
@@ -164,11 +168,11 @@ namespace MahoSoft.Datos.Migrations
                 name: "Tallas",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    GrupoTallaId = table.Column<int>(type: "int", nullable: false),
-                    Valor = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Orden = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    GrupoTallaId = table.Column<int>(type: "integer", nullable: false),
+                    Valor = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Orden = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -185,14 +189,14 @@ namespace MahoSoft.Datos.Migrations
                 name: "Clientes",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    TipoDocumentoId = table.Column<int>(type: "int", nullable: true),
-                    Documento = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    Telefono = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    Correo = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    CreadoEn = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    TipoDocumentoId = table.Column<int>(type: "integer", nullable: true),
+                    Documento = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    Telefono = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    Correo = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    CreadoEn = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -209,23 +213,23 @@ namespace MahoSoft.Datos.Migrations
                 name: "Proveedores",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    TipoDocumentoId = table.Column<int>(type: "int", nullable: false),
-                    Documento = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    Direccion = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
-                    Ciudad = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    Telefono = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Contacto = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
-                    IvaPorcentaje = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
-                    Activo = table.Column<bool>(type: "bit", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    TipoDocumentoId = table.Column<int>(type: "integer", nullable: false),
+                    Documento = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    Direccion = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
+                    Ciudad = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Telefono = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    Contacto = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
+                    IvaPorcentaje = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Proveedores", x => x.Id);
-                    table.CheckConstraint("CK_Proveedores_Iva", "[IvaPorcentaje] BETWEEN 0 AND 100");
+                    table.CheckConstraint("CK_Proveedores_Iva", "\"IvaPorcentaje\" BETWEEN 0 AND 100");
                     table.ForeignKey(
                         name: "FK_Proveedores_TiposDocumento_TipoDocumentoId",
                         column: x => x.TipoDocumentoId,
@@ -238,18 +242,20 @@ namespace MahoSoft.Datos.Migrations
                 name: "Usuarios",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    Rol = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    Telefono = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    TipoDocumentoId = table.Column<int>(type: "int", nullable: true),
-                    Documento = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    Activo = table.Column<bool>(type: "bit", nullable: false),
-                    UltimoAcceso = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    CreadoEn = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false, collation: "sin_mayusculas"),
+                    PasswordHash = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Rol = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    Telefono = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    TipoDocumentoId = table.Column<int>(type: "integer", nullable: true),
+                    Documento = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false),
+                    UltimoAcceso = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    ResetTokenHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    ResetTokenExpira = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    CreadoEn = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -266,10 +272,10 @@ namespace MahoSoft.Datos.Migrations
                 name: "ProductoColores",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ProductoId = table.Column<int>(type: "int", nullable: false),
-                    Color = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ProductoId = table.Column<int>(type: "integer", nullable: false),
+                    Color = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, collation: "sin_mayusculas")
                 },
                 constraints: table =>
                 {
@@ -286,14 +292,14 @@ namespace MahoSoft.Datos.Migrations
                 name: "ProductoTallas",
                 columns: table => new
                 {
-                    ProductoId = table.Column<int>(type: "int", nullable: false),
-                    TallaId = table.Column<int>(type: "int", nullable: false),
-                    Stock = table.Column<int>(type: "int", nullable: false)
+                    ProductoId = table.Column<int>(type: "integer", nullable: false),
+                    TallaId = table.Column<int>(type: "integer", nullable: false),
+                    Stock = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ProductoTallas", x => new { x.ProductoId, x.TallaId });
-                    table.CheckConstraint("CK_ProductoTallas_Stock", "[Stock] >= 0");
+                    table.CheckConstraint("CK_ProductoTallas_Stock", "\"Stock\" >= 0");
                     table.ForeignKey(
                         name: "FK_ProductoTallas_Productos_ProductoId",
                         column: x => x.ProductoId,
@@ -312,36 +318,36 @@ namespace MahoSoft.Datos.Migrations
                 name: "Compras",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Numero = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    ProveedorId = table.Column<int>(type: "int", nullable: false),
-                    TipoComprobante = table.Column<string>(type: "nvarchar(60)", maxLength: 60, nullable: false),
-                    NumeroComprobante = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    FechaComprobante = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    VendedorProveedor = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
-                    Cufe = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    CondicionPago = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Numero = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    ProveedorId = table.Column<int>(type: "integer", nullable: false),
+                    TipoComprobante = table.Column<string>(type: "character varying(60)", maxLength: 60, nullable: false),
+                    NumeroComprobante = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, collation: "sin_mayusculas"),
+                    FechaComprobante = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    VendedorProveedor = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
+                    Cufe = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    CondicionPago = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
                     FechaVencimiento = table.Column<DateOnly>(type: "date", nullable: true),
-                    EstadoPago = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    IvaPorcentaje = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
-                    PreciosIncluyenIva = table.Column<bool>(type: "bit", nullable: false),
-                    Descuento = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Subtotal = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Iva = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Total = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    ValorComprobante = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
-                    Notas = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    DocumentoId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    UsuarioId = table.Column<int>(type: "int", nullable: false),
-                    CreadoEn = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    EstadoPago = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    IvaPorcentaje = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
+                    PreciosIncluyenIva = table.Column<bool>(type: "boolean", nullable: false),
+                    Descuento = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Subtotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Iva = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Total = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    ValorComprobante = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
+                    Notas = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    DocumentoId = table.Column<Guid>(type: "uuid", nullable: true),
+                    UsuarioId = table.Column<int>(type: "integer", nullable: false),
+                    CreadoEn = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Compras", x => x.Id);
-                    table.CheckConstraint("CK_Compras_Iva", "[IvaPorcentaje] BETWEEN 0 AND 100");
-                    table.CheckConstraint("CK_Compras_Montos", "[Descuento] >= 0 AND [Subtotal] >= 0 AND [Iva] >= 0 AND [Total] >= 0");
-                    table.CheckConstraint("CK_Compras_Vencimiento", "[CondicionPago] <> 'Credito' OR [FechaVencimiento] IS NOT NULL");
+                    table.CheckConstraint("CK_Compras_Iva", "\"IvaPorcentaje\" BETWEEN 0 AND 100");
+                    table.CheckConstraint("CK_Compras_Montos", "\"Descuento\" >= 0 AND \"Subtotal\" >= 0 AND \"Iva\" >= 0 AND \"Total\" >= 0");
+                    table.CheckConstraint("CK_Compras_Vencimiento", "\"CondicionPago\" <> 'Credito' OR \"FechaVencimiento\" IS NOT NULL");
                     table.ForeignKey(
                         name: "FK_Compras_Archivos_DocumentoId",
                         column: x => x.DocumentoId,
@@ -366,8 +372,8 @@ namespace MahoSoft.Datos.Migrations
                 name: "UsuarioPermisos",
                 columns: table => new
                 {
-                    UsuarioId = table.Column<int>(type: "int", nullable: false),
-                    Permiso = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false)
+                    UsuarioId = table.Column<int>(type: "integer", nullable: false),
+                    Permiso = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -384,30 +390,30 @@ namespace MahoSoft.Datos.Migrations
                 name: "Ventas",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    NumeroFactura = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Fecha = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    Tipo = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    ClienteId = table.Column<int>(type: "int", nullable: true),
-                    VendedorId = table.Column<int>(type: "int", nullable: false),
-                    MetodoPago = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    DescuentoPorcentaje = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
-                    Envio = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Subtotal = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Descuento = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Total = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Estado = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    AnuladaEn = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    AnuladaPorId = table.Column<int>(type: "int", nullable: true),
-                    MotivoAnulacion = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    NumeroFactura = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Fecha = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    Tipo = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    ClienteId = table.Column<int>(type: "integer", nullable: true),
+                    VendedorId = table.Column<int>(type: "integer", nullable: false),
+                    MetodoPago = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    DescuentoPorcentaje = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
+                    Envio = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Subtotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Descuento = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Total = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Estado = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    AnuladaEn = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    AnuladaPorId = table.Column<int>(type: "integer", nullable: true),
+                    MotivoAnulacion = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Ventas", x => x.Id);
-                    table.CheckConstraint("CK_Ventas_Anulacion", "[Estado] <> 'Anulada' OR ([AnuladaEn] IS NOT NULL AND [AnuladaPorId] IS NOT NULL)");
-                    table.CheckConstraint("CK_Ventas_Descuento", "[DescuentoPorcentaje] BETWEEN 0 AND 100");
-                    table.CheckConstraint("CK_Ventas_Montos", "[Envio] >= 0 AND [Subtotal] >= 0 AND [Descuento] >= 0 AND [Total] >= 0");
+                    table.CheckConstraint("CK_Ventas_Anulacion", "\"Estado\" <> 'Anulada' OR (\"AnuladaEn\" IS NOT NULL AND \"AnuladaPorId\" IS NOT NULL)");
+                    table.CheckConstraint("CK_Ventas_Descuento", "\"DescuentoPorcentaje\" BETWEEN 0 AND 100");
+                    table.CheckConstraint("CK_Ventas_Montos", "\"Envio\" >= 0 AND \"Subtotal\" >= 0 AND \"Descuento\" >= 0 AND \"Total\" >= 0");
                     table.ForeignKey(
                         name: "FK_Ventas_Clientes_ClienteId",
                         column: x => x.ClienteId,
@@ -432,21 +438,21 @@ namespace MahoSoft.Datos.Migrations
                 name: "CompraItems",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    CompraId = table.Column<int>(type: "int", nullable: false),
-                    ProductoId = table.Column<int>(type: "int", nullable: false),
-                    TallaId = table.Column<int>(type: "int", nullable: false),
-                    ReferenciaProveedor = table.Column<string>(type: "nvarchar(60)", maxLength: 60, nullable: true),
-                    Cantidad = table.Column<int>(type: "int", nullable: false),
-                    PrecioUnitario = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    CostoUnitario = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CompraId = table.Column<int>(type: "integer", nullable: false),
+                    ProductoId = table.Column<int>(type: "integer", nullable: false),
+                    TallaId = table.Column<int>(type: "integer", nullable: false),
+                    ReferenciaProveedor = table.Column<string>(type: "character varying(60)", maxLength: 60, nullable: true),
+                    Cantidad = table.Column<int>(type: "integer", nullable: false),
+                    PrecioUnitario = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    CostoUnitario = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_CompraItems", x => x.Id);
-                    table.CheckConstraint("CK_CompraItems_Cantidad", "[Cantidad] > 0");
-                    table.CheckConstraint("CK_CompraItems_Precios", "[PrecioUnitario] >= 0 AND [CostoUnitario] >= 0");
+                    table.CheckConstraint("CK_CompraItems_Cantidad", "\"Cantidad\" > 0");
+                    table.CheckConstraint("CK_CompraItems_Precios", "\"PrecioUnitario\" >= 0 AND \"CostoUnitario\" >= 0");
                     table.ForeignKey(
                         name: "FK_CompraItems_Compras_CompraId",
                         column: x => x.CompraId,
@@ -471,10 +477,10 @@ namespace MahoSoft.Datos.Migrations
                 name: "ComprobantesTransferencia",
                 columns: table => new
                 {
-                    VentaId = table.Column<int>(type: "int", nullable: false),
-                    BancoId = table.Column<int>(type: "int", nullable: true),
-                    Referencia = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    ArchivoId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    VentaId = table.Column<int>(type: "integer", nullable: false),
+                    BancoId = table.Column<int>(type: "integer", nullable: true),
+                    Referencia = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    ArchivoId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -503,22 +509,22 @@ namespace MahoSoft.Datos.Migrations
                 name: "MovimientosInventario",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Fecha = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    Tipo = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    ProductoId = table.Column<int>(type: "int", nullable: false),
-                    TallaId = table.Column<int>(type: "int", nullable: false),
-                    Cantidad = table.Column<int>(type: "int", nullable: false),
-                    Motivo = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    CompraId = table.Column<int>(type: "int", nullable: true),
-                    VentaId = table.Column<int>(type: "int", nullable: true),
-                    UsuarioId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Fecha = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    Tipo = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    ProductoId = table.Column<int>(type: "integer", nullable: false),
+                    TallaId = table.Column<int>(type: "integer", nullable: false),
+                    Cantidad = table.Column<int>(type: "integer", nullable: false),
+                    Motivo = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    CompraId = table.Column<int>(type: "integer", nullable: true),
+                    VentaId = table.Column<int>(type: "integer", nullable: true),
+                    UsuarioId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_MovimientosInventario", x => x.Id);
-                    table.CheckConstraint("CK_MovimientosInventario_Cantidad", "[Cantidad] <> 0");
+                    table.CheckConstraint("CK_MovimientosInventario_Cantidad", "\"Cantidad\" <> 0");
                     table.ForeignKey(
                         name: "FK_MovimientosInventario_Compras_CompraId",
                         column: x => x.CompraId,
@@ -555,12 +561,12 @@ namespace MahoSoft.Datos.Migrations
                 name: "VentaEntregas",
                 columns: table => new
                 {
-                    VentaId = table.Column<int>(type: "int", nullable: false),
-                    Direccion = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
-                    Barrio = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    Ciudad = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    VentaId = table.Column<int>(type: "integer", nullable: false),
+                    Direccion = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false),
+                    Barrio = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Ciudad = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     FechaEntrega = table.Column<DateOnly>(type: "date", nullable: true),
-                    Notas = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                    Notas = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -577,21 +583,21 @@ namespace MahoSoft.Datos.Migrations
                 name: "VentaItems",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    VentaId = table.Column<int>(type: "int", nullable: false),
-                    ProductoId = table.Column<int>(type: "int", nullable: false),
-                    TallaId = table.Column<int>(type: "int", nullable: false),
-                    NombreProducto = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Cantidad = table.Column<int>(type: "int", nullable: false),
-                    PrecioUnitario = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    CostoUnitario = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    VentaId = table.Column<int>(type: "integer", nullable: false),
+                    ProductoId = table.Column<int>(type: "integer", nullable: false),
+                    TallaId = table.Column<int>(type: "integer", nullable: false),
+                    NombreProducto = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    Cantidad = table.Column<int>(type: "integer", nullable: false),
+                    PrecioUnitario = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    CostoUnitario = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_VentaItems", x => x.Id);
-                    table.CheckConstraint("CK_VentaItems_Cantidad", "[Cantidad] > 0");
-                    table.CheckConstraint("CK_VentaItems_Precios", "[PrecioUnitario] >= 0 AND [CostoUnitario] >= 0");
+                    table.CheckConstraint("CK_VentaItems_Cantidad", "\"Cantidad\" > 0");
+                    table.CheckConstraint("CK_VentaItems_Precios", "\"PrecioUnitario\" >= 0 AND \"CostoUnitario\" >= 0");
                     table.ForeignKey(
                         name: "FK_VentaItems_Productos_ProductoId",
                         column: x => x.ProductoId,
@@ -634,7 +640,7 @@ namespace MahoSoft.Datos.Migrations
                 table: "Clientes",
                 columns: new[] { "TipoDocumentoId", "Documento" },
                 unique: true,
-                filter: "[Documento] IS NOT NULL");
+                filter: "\"Documento\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CompraItems_CompraId",
@@ -779,6 +785,12 @@ namespace MahoSoft.Datos.Migrations
                 table: "Usuarios",
                 column: "Email",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Usuarios_ResetTokenHash",
+                table: "Usuarios",
+                column: "ResetTokenHash",
+                filter: "\"ResetTokenHash\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Usuarios_TipoDocumentoId",

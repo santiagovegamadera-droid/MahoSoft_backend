@@ -18,7 +18,7 @@ public interface ICompraRepositorio
 
     /// <summary>
     /// Next consecutive after the highest <c>{prefijo}NNN</c> (e.g. OC-2026-046). Must run inside a transaction:
-    /// the rows read stay locked until it ends, so two purchases saved at once can't get the same number.
+    /// numbering stays locked until it ends, so two purchases saved at once can't get the same number.
     /// </summary>
     Task<string> SiguienteNumeroAsync(string prefijo, CancellationToken ct = default);
 
@@ -55,11 +55,9 @@ public class CompraRepositorio(AppDbContext db) : ICompraRepositorio
 
     public async Task<string> SiguienteNumeroAsync(string prefijo, CancellationToken ct = default)
     {
-        // UPDLOCK + HOLDLOCK lock the matching range until the transaction ends, including "no rows yet"
-        var numeros = await db.Database.SqlQuery<string>(
-                $"SELECT Numero AS Value FROM Compras WITH (UPDLOCK, HOLDLOCK) WHERE Numero LIKE {prefijo + "%"}"
-            )
-            .ToListAsync(ct);
+        // Held until the transaction ends, also when there is no purchase yet to lock
+        await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock({Bloqueos.NumeroCompra})", ct);
+        var numeros = await db.Compras.Where(c => c.Numero.StartsWith(prefijo)).Select(c => c.Numero).ToListAsync(ct);
         var ultimo = numeros.Select(n => int.TryParse(n[prefijo.Length..], out var x) ? x : 0).DefaultIfEmpty(0).Max();
         return $"{prefijo}{ultimo + 1:000}";
     }

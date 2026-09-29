@@ -8,7 +8,7 @@ public class CategoriaConfig : IEntityTypeConfiguration<Categoria>
 {
     public void Configure(EntityTypeBuilder<Categoria> e)
     {
-        e.Property(x => x.Nombre).HasMaxLength(100);
+        e.Property(x => x.Nombre).HasMaxLength(100).UseCollation(AppDbContext.SinMayusculas);
         e.HasIndex(x => x.Nombre).IsUnique();
         e.Property(x => x.Descripcion).HasMaxLength(500);
     }
@@ -20,8 +20,8 @@ public class ProductoConfig : IEntityTypeConfiguration<Producto>
     {
         e.ToTable(t =>
         {
-            t.HasCheckConstraint("CK_Productos_PrecioVenta", "[PrecioVenta] >= 0");
-            t.HasCheckConstraint("CK_Productos_CostoActual", "[CostoActual] >= 0");
+            t.HasCheckConstraint("CK_Productos_PrecioVenta", "\"PrecioVenta\" >= 0");
+            t.HasCheckConstraint("CK_Productos_CostoActual", "\"CostoActual\" >= 0");
         });
         e.Property(x => x.Nombre).HasMaxLength(150);
         e.Property(x => x.Descripcion).HasMaxLength(1000);
@@ -36,7 +36,7 @@ public class ProductoColorConfig : IEntityTypeConfiguration<ProductoColor>
 {
     public void Configure(EntityTypeBuilder<ProductoColor> e)
     {
-        e.Property(x => x.Color).HasMaxLength(50);
+        e.Property(x => x.Color).HasMaxLength(50).UseCollation(AppDbContext.SinMayusculas);
         e.HasIndex(x => new { x.ProductoId, x.Color }).IsUnique();
     }
 }
@@ -45,7 +45,7 @@ public class ProductoTallaConfig : IEntityTypeConfiguration<ProductoTalla>
 {
     public void Configure(EntityTypeBuilder<ProductoTalla> e)
     {
-        e.ToTable(t => t.HasCheckConstraint("CK_ProductoTallas_Stock", "[Stock] >= 0"));
+        e.ToTable(t => t.HasCheckConstraint("CK_ProductoTallas_Stock", "\"Stock\" >= 0"));
         e.HasKey(x => new { x.ProductoId, x.TallaId });
         e.HasOne(x => x.Talla).WithMany().HasForeignKey(x => x.TallaId);
     }
@@ -55,7 +55,7 @@ public class ArchivoConfig : IEntityTypeConfiguration<Archivo>
 {
     public void Configure(EntityTypeBuilder<Archivo> e)
     {
-        e.ToTable(t => t.HasCheckConstraint("CK_Archivos_Tamano", "[Tamano] >= 0"));
+        e.ToTable(t => t.HasCheckConstraint("CK_Archivos_Tamano", "\"Tamano\" >= 0"));
         e.Property(x => x.Nombre).HasMaxLength(255);
         e.Property(x => x.TipoMime).HasMaxLength(100);
         e.Property(x => x.Ubicacion).HasMaxLength(1000);

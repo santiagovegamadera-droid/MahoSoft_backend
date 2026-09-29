@@ -67,7 +67,7 @@ public class VentaServicio(
                 Nombre = Path.GetFileName(comprobante!.Nombre),
                 TipoMime = archivo.TipoMime,
                 Tamano = archivo.Bytes.Length,
-                Almacen = AlmacenArchivo.Local,
+                Almacen = documentos.Almacen,
                 Ubicacion = ruta,
                 SubidoEn = DateTimeOffset.UtcNow,
             };
@@ -92,7 +92,7 @@ public class VentaServicio(
         catch
         {
             if (ruta is not null)
-                documentos.Eliminar(ruta);
+                await documentos.EliminarAsync(ruta);
             throw;
         }
         return await ObtenerAsync(venta.Id, ct);
@@ -154,7 +154,7 @@ public class VentaServicio(
         var archivo =
             venta.Comprobante?.Archivo ?? throw new NoEncontradoException("Esta venta no tiene comprobante adjunto");
         var contenido =
-            documentos.Abrir(archivo.Ubicacion) ?? throw new NoEncontradoException("El comprobante ya no está en el servidor");
+            await documentos.AbrirAsync(archivo.Ubicacion, ct) ?? throw new NoEncontradoException("El comprobante ya no está en el servidor");
         return new DocumentoArchivo(contenido, archivo.Nombre, archivo.TipoMime);
     }
 

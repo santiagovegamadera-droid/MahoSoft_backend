@@ -1,10 +1,17 @@
 using MahoSoft.Entidades;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MahoSoft.Datos;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    /// <summary>
+    /// Case-insensitive, accent-sensitive text (like SQL Server's default): "Blusas" and "blusas" are the same
+    /// category. Used on the unique names and codes people type.
+    /// </summary>
+    public const string SinMayusculas = "sin_mayusculas";
+
     // Configuración
     public DbSet<Negocio> Negocio => Set<Negocio>();
     public DbSet<TipoDocumento> TiposDocumento => Set<TipoDocumento>();
@@ -58,6 +65,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.Properties<decimal>().HavePrecision(18, 2);
         // Explicit limits instead of nvarchar(max); long fields raise this in their configuration
         builder.Properties<string>().HaveMaxLength(200);
+        // PostgreSQL keeps dates in UTC; Colombian times (-05:00) are converted on the way in
+        builder.Properties<DateTimeOffset>().HaveConversion<UtcConverter>();
 
         // Enums are stored as their name so the tables read like the app
         builder.Properties<Rol>().HaveConversion<string>().HaveMaxLength(30);
@@ -73,6 +82,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasCollation(SinMayusculas, locale: "und-u-ks-level2", provider: "icu", deterministic: false);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
         foreach (var fk in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
@@ -81,4 +91,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             fk.DeleteBehavior = CascadeDeletes.Contains(pair) ? DeleteBehavior.Cascade : DeleteBehavior.Restrict;
         }
     }
+
+    private class UtcConverter() : ValueConverter<DateTimeOffset, DateTimeOffset>(d => d.ToUniversalTime(), d => d);
 }

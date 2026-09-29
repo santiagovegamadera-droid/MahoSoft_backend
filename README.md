@@ -7,8 +7,8 @@ El frontend está en [MahoSoft](https://github.com/santiagovegamadera-droid/Maho
 ## Tecnología
 
 - .NET 9 (ASP.NET Core Web API)
-- Entity Framework Core 9 con SQL Server
-- Imágenes de productos en Cloudinary; PDF de facturas de proveedores en el disco del servidor
+- Entity Framework Core 9 con PostgreSQL (Npgsql). En producción, la base de Supabase
+- Imágenes de productos en Cloudinary; facturas de proveedores y comprobantes de transferencia en Supabase Storage (en local, en el disco)
 
 ## Arquitectura en capas
 
@@ -45,13 +45,16 @@ El modelo está en `src/MahoSoft.Entidades` (una clase por tabla, agrupadas por 
 Reglas generales:
 
 - Dinero en `decimal(18,2)`; los estados (rol, método de pago…) se guardan como texto.
+- Fechas en UTC (`timestamp with time zone`); las horas de Colombia se convierten al guardar.
+- Los nombres y códigos únicos que se escriben a mano (categorías, bancos, grupos de tallas, colores, número de factura del proveedor, email) usan la collation `sin_mayusculas`: "Blusas" y "blusas" cuentan como el mismo.
+- Los consecutivos (OC-…, VTA-…) se numeran con un bloqueo de PostgreSQL (`pg_advisory_xact_lock`), así dos cajas no sacan el mismo número.
 - Nada con historial se borra: productos, proveedores, categorías y usuarios se desactivan, y las ventas anuladas quedan marcadas como `Anulada`. Solo las líneas de una compra o venta se borran con ella.
 - El stock vive en `ProductoTallas` y cada cambio queda en `MovimientosInventario`; la suma de los movimientos de una talla es su stock.
 - El costo de un producto es el de su última compra, sin IVA.
 
 ## Cómo levantarlo en local
 
-Requisitos: .NET 9 SDK y SQL Server en `localhost` con autenticación de Windows (la cadena de conexión está en `appsettings.Development.json`, clave `ConnectionStrings:MahoSoft`).
+Requisitos: .NET 9 SDK y PostgreSQL 17 en `localhost:5432`, usuario `postgres` con contraseña `postgres` (en Windows: `winget install PostgreSQL.PostgreSQL.17`). La cadena de conexión está en `appsettings.Development.json`, clave `ConnectionStrings:MahoSoft`; la base `mahosoft` la crea la API al arrancar.
 
 La primera vez, crea la clave secreta con la que se firman las sesiones (no se guarda en el repositorio):
 
@@ -74,16 +77,27 @@ dotnet tool restore
 dotnet run --project src/MahoSoft.Api --launch-profile http
 ```
 
-Para enviar correos (factura al cliente y recuperar la contraseña), la cuenta de Gmail de la tienda con una [contraseña de aplicación](https://myaccount.google.com/apppasswords) (requiere verificación en 2 pasos). Sin esto, esas dos funciones responden 503 "todavía no está configurado":
+Para enviar correos (factura al cliente y recuperar la contraseña) hay dos opciones. Sin ninguna, esas dos funciones responden 503 "todavía no está configurado".
 
-```bash
-dotnet user-secrets set "Correo:Usuario" "<correo>@gmail.com" --project src/MahoSoft.Api
-dotnet user-secrets set "Correo:Password" "<contraseña de aplicación>" --project src/MahoSoft.Api
-```
+- **Brevo** (la que se usa en producción, porque Render gratis bloquea SMTP): una clave de API de [Brevo](https://app.brevo.com/settings/keys/api) y el correo de la tienda verificado como remitente en Brevo (Senders & IP → Senders).
+
+  ```bash
+  dotnet user-secrets set "Correo:BrevoApiKey" "xkeysib-…" --project src/MahoSoft.Api
+  dotnet user-secrets set "Correo:Remitente" "<correo de la tienda>" --project src/MahoSoft.Api
+  ```
+
+- **Gmail por SMTP**: la cuenta con una [contraseña de aplicación](https://myaccount.google.com/apppasswords) (requiere verificación en 2 pasos).
+
+  ```bash
+  dotnet user-secrets set "Correo:Usuario" "<correo>@gmail.com" --project src/MahoSoft.Api
+  dotnet user-secrets set "Correo:Password" "<contraseña de aplicación>" --project src/MahoSoft.Api
+  ```
+
+Si está `Correo:BrevoApiKey` se usa Brevo; si no, SMTP.
 
 `App:UrlFrontend` es la dirección del frontend que va en el enlace para recuperar la contraseña.
 
-Las facturas de proveedores se guardan en el disco, en `Archivos:Carpeta` (`App_Data/archivos` dentro de la API por defecto; está en `.gitignore`).
+Las facturas de proveedores y los comprobantes se guardan en Supabase Storage si están `Supabase:Url` y `Supabase:ServiceKey`; si no, en el disco, en `Archivos:Carpeta` (`App_Data/archivos` dentro de la API por defecto; está en `.gitignore`). En local lo normal es el disco.
 
 La API queda en `http://localhost:5241`. El frontend (`http://localhost:8443`) está permitido en `Cors:Origenes`.
 
@@ -97,49 +111,69 @@ dotnet ef migrations add NombreDelCambio --project src/MahoSoft.Datos --startup-
 
 ## Publicar (producción)
 
-Sirve para cualquier proveedor (Azure, un VPS, un servidor propio con IIS…). Fuera de desarrollo **no se cargan datos de ejemplo** y toda la configuración sale de **variables de entorno**; en el código y en `appsettings.json` no hay secretos. La configuración local (base, CORS, dirección del frontend) está solo en `appsettings.Development.json`.
+El sistema se publica así: **API en Render** (Docker), **frontend en Vercel** y **base de datos y archivos en Supabase**. Fuera de desarrollo **no se cargan datos de ejemplo** y toda la configuración sale de **variables de entorno**; en el código y en `appsettings.json` no hay secretos.
 
-### Variables de entorno de la API
+### 1. Supabase (base de datos y archivos)
+
+1. Crear el proyecto en [supabase.com](https://supabase.com) y guardar la contraseña de la base.
+2. **Cadena de conexión**: botón **Connect** → **Session pooler** (Render no llega a la conexión directa, que es solo IPv6). Pasarla al formato de Npgsql:
+
+   ```
+   Host=aws-0-<región>.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.<ref del proyecto>;Password=<contraseña>;SSL Mode=Require
+   ```
+
+3. **Archivos**: Project Settings → API Keys → copiar una **secret key** (`sb_secret_…`; sirve también la `service_role`). La API crea sola el bucket privado `documentos` la primera vez que guarda un archivo. Esa clave salta todas las reglas de seguridad: solo va en Render, nunca en el frontend.
+
+Las tablas las crea la API al arrancar; no hay que ejecutar nada en el editor SQL.
+
+### 2. Render (API)
+
+1. New → **Web Service** → conectar el repositorio del backend. Render detecta el `Dockerfile` de la raíz (runtime Docker). Plan: Free.
+2. Variables de entorno (Environment):
 
 | Variable | Obligatoria | Para qué |
 | --- | --- | --- |
 | `ASPNETCORE_ENVIRONMENT` | sí | `Production` |
-| `ConnectionStrings__MahoSoft` | sí | Cadena de conexión a SQL Server |
+| `ConnectionStrings__MahoSoft` | sí | La cadena del Session pooler de Supabase (paso 1.2) |
 | `Jwt__Key` | sí | Clave para firmar las sesiones: al menos 32 caracteres aleatorios, distinta a la de desarrollo |
-| `Cors__Origenes__0` | sí | Dirección exacta del frontend, con `https://` (más orígenes: `__1`, `__2`…) |
+| `Cors__Origenes__0` | sí | Dirección exacta del frontend en Vercel, con `https://` y sin `/` al final (más orígenes: `__1`, `__2`…) |
 | `App__UrlFrontend` | sí | La misma dirección del frontend; va en el enlace para recuperar la contraseña |
-| `Inicial__AdminEmail`, `Inicial__AdminPassword`, `Inicial__AdminNombre` | solo el primer arranque | Primera administradora (contraseña de al menos 12 caracteres). Quitarlas después |
+| `Supabase__Url` | sí | `https://<ref del proyecto>.supabase.co` |
+| `Supabase__ServiceKey` | sí | La secret key de Supabase (paso 1.3) |
+| `Inicial__AdminEmail`, `Inicial__AdminPassword`, `Inicial__AdminNombre` | solo el primer arranque | El administrador (contraseña de al menos 12 caracteres). Quitarlas después |
 | `Inicial__NombreNegocio` | no | Nombre del negocio al crear la base (se cambia luego en Configuración) |
-| `Archivos__Carpeta` | recomendada | Carpeta de las facturas y comprobantes, en un disco con copia de seguridad |
 | `Cloudinary__CloudName`, `Cloudinary__ApiKey`, `Cloudinary__ApiSecret` | para subir fotos | Sin ellas todo funciona, pero subir fotos responde "no está configurado" |
-| `Correo__Usuario`, `Correo__Password` | para enviar correos | Gmail y contraseña de aplicación; sin ellas no salen facturas por correo ni enlaces de contraseña |
-| `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | detrás de un proxy | `true` si HTTPS lo termina un proxy o el proveedor (Azure App Service, Nginx…) |
+| `Correo__BrevoApiKey`, `Correo__Remitente` | para enviar correos | Clave de Brevo y el correo verificado en Brevo; sin ellas no salen facturas por correo ni enlaces de contraseña. Render gratis bloquea SMTP, así que Gmail directo no funciona ahí |
 
-Si falta una obligatoria, la API **no arranca** y el error dice cuál falta.
+El `Dockerfile` ya fija el puerto (10000), instala las fuentes que necesitan los PDF y el Excel, y activa `ASPNETCORE_FORWARDEDHEADERS_ENABLED`, porque Render termina HTTPS en su proxy.
 
-### Primer arranque
+Si falta una obligatoria, la API **no arranca** y el log de Render dice cuál falta.
 
-1. Crear la base vacía en SQL Server (solo la base: las tablas las crea la API).
-2. Definir las variables, incluidas las `Inicial__…`, y arrancar la API. Al iniciar aplica las migraciones y, en una base nueva, crea la configuración básica (tipos de documento, tallas, bancos, descuentos del POS, umbrales de stock) y la primera administradora con todos los permisos. En cada arranque vuelve a aplicar las migraciones pendientes y no toca los datos existentes.
-3. Entrar con esa cuenta, cambiar la contraseña si se quiere, completar **Configuración → Datos del negocio** y crear los demás usuarios en **Usuarios**.
-4. Quitar las variables `Inicial__…`.
+En el plan gratis el servicio se duerme tras 15 minutos sin uso; la primera petición después tarda cerca de un minuto en responder.
 
-Compilar la API: `dotnet publish src/MahoSoft.Api -c Release -o publicar` y subir la carpeta `publicar`.
+### 3. Primer arranque
 
-### Frontend
+1. Con las variables definidas, incluidas las `Inicial__…`, desplegar. Al iniciar, la API aplica las migraciones y, en una base nueva, crea la configuración básica (tipos de documento, tallas, bancos, descuentos del POS, umbrales de stock) y el administrador. En cada despliegue vuelve a aplicar las migraciones pendientes y no toca los datos.
+2. Entrar con esa cuenta y completar **Configuración → Datos del negocio**.
+3. Quitar las variables `Inicial__…` en Render.
 
-Es un sitio estático. Se compila con la dirección pública de la API y se sube la carpeta `dist` a cualquier hosting estático (Azure Static Web Apps, Netlify, IIS…):
+### 4. Vercel (frontend)
+
+1. New Project → importar el repositorio del frontend. Vercel detecta Vite (build `npm run build`, salida `dist`).
+2. Variable de entorno `VITE_API_URL` = la dirección de la API en Render (`https://<servicio>.onrender.com`, sin `/` al final). Se lee al compilar: si se cambia, hay que volver a desplegar.
+3. La dirección que da Vercel va en `Cors__Origenes__0` y `App__UrlFrontend` de Render.
+
+### Copias de seguridad
+
+Supabase gratis no guarda copias descargables. Conviene sacar una cada tanto con `pg_dump` (viene con PostgreSQL):
 
 ```bash
-cd frontend
-VITE_API_URL=https://api.tudominio.com npm run build
+pg_dump "<cadena de conexión del Session pooler en formato URI>" -Fc -f mahosoft.backup
 ```
-
-(En PowerShell: `$env:VITE_API_URL="https://api.tudominio.com"; npm run build`.) El dominio del frontend debe estar en `Cors__Origenes__0` y en `App__UrlFrontend` de la API, y ambos deben servirse con HTTPS: la API responde con HSTS fuera de desarrollo.
 
 ## Pruebas automáticas
 
-`tests/MahoSoft.Pruebas` levanta la API completa en memoria contra una base propia, `MahoSoft_Pruebas`, que se borra y se crea con los datos de ejemplo en cada corrida (la base de desarrollo no se toca). Necesita el mismo SQL Server local y la clave `Jwt:Key` en user-secrets.
+`tests/MahoSoft.Pruebas` levanta la API completa en memoria contra una base propia, `mahosoft_pruebas`, que se borra y se crea con los datos de ejemplo en cada corrida (la base de desarrollo no se toca). Necesita el mismo PostgreSQL local y la clave `Jwt:Key` en user-secrets.
 
 ```bash
 dotnet test

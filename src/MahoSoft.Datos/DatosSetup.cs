@@ -19,7 +19,7 @@ public static class DatosSetup
     /// </summary>
     public static IServiceCollection AddDatos(this IServiceCollection services, IConfiguration config)
     {
-        services.AddDbContext<AppDbContext>(o => o.UseSqlServer(config.GetConnectionString("MahoSoft")));
+        services.AddDbContext<AppDbContext>(o => o.UseNpgsql(config.GetConnectionString("MahoSoft")));
         services.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();
 
         services.AddScoped<IUsuarioRepositorio, UsuarioRepositorio>();
@@ -36,11 +36,19 @@ public static class DatosSetup
         services.AddOptions<CloudinaryOptions>().Bind(config.GetSection(CloudinaryOptions.Seccion));
         services.AddSingleton<IAlmacenImagenes, CloudinaryAlmacen>();
 
+        // Documents go to Supabase Storage when it is configured (production), otherwise to the server disk
         services.AddOptions<ArchivosOptions>().Bind(config.GetSection(ArchivosOptions.Seccion));
-        services.AddSingleton<IAlmacenDocumentos, DiscoAlmacen>();
+        services.AddOptions<SupabaseOptions>().Bind(config.GetSection(SupabaseOptions.Seccion));
+        if (config.GetSection(SupabaseOptions.Seccion).Get<SupabaseOptions>() is { Configurado: true })
+            services.AddSingleton<IAlmacenDocumentos, SupabaseAlmacen>();
+        else
+            services.AddSingleton<IAlmacenDocumentos, DiscoAlmacen>();
 
         services.AddOptions<CorreoOptions>().Bind(config.GetSection(CorreoOptions.Seccion));
-        services.AddSingleton<IEnviadorCorreo, SmtpEnviador>();
+        if (config.GetSection(CorreoOptions.Seccion).Get<CorreoOptions>() is { UsaBrevo: true })
+            services.AddSingleton<IEnviadorCorreo, BrevoEnviador>();
+        else
+            services.AddSingleton<IEnviadorCorreo, SmtpEnviador>();
 
         return services;
     }

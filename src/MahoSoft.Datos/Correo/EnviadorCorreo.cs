@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
@@ -7,8 +8,13 @@ using MimeKit;
 namespace MahoSoft.Datos.Correo;
 
 /// <summary>
-/// Settings of the "Correo" section (SMTP). With Gmail: Host smtp.gmail.com, Puerto 587, Usuario the Gmail address
-/// and Password an app password (user-secrets in development, environment variables in production).
+/// Settings of the "Correo" section. Two ways to send:
+/// <list type="bullet">
+/// <item>SMTP, e.g. Gmail: Host smtp.gmail.com, Puerto 587, Usuario the Gmail address and Password an app password.</item>
+/// <item>Brevo's HTTP API (BrevoApiKey + Remitente, a sender verified in Brevo), for hosts that block SMTP such as
+/// Render's free plan.</item>
+/// </list>
+/// Secrets go in user-secrets in development and environment variables in production.
 /// </summary>
 public class CorreoOptions
 {
@@ -25,8 +31,19 @@ public class CorreoOptions
     /// <summary>Name people see as the sender.</summary>
     public string NombreRemitente { get; set; } = "Maho Boutique";
 
-    /// <summary>Set when a sender is known (with or without login, e.g. a local test server).</summary>
-    public bool Configurado => !string.IsNullOrWhiteSpace(Remitente) || !string.IsNullOrWhiteSpace(Usuario);
+    /// <summary>Brevo API key (xkeysib-…). When set, emails go through Brevo instead of SMTP.</summary>
+    public string BrevoApiKey { get; set; } = "";
+
+    public bool UsaBrevo => !string.IsNullOrWhiteSpace(BrevoApiKey);
+
+    /// <summary>
+    /// Set when a sender is known: SMTP with or without login (e.g. a local test server), or Brevo with its
+    /// verified sender.
+    /// </summary>
+    public bool Configurado =>
+        UsaBrevo
+            ? !string.IsNullOrWhiteSpace(Remitente)
+            : !string.IsNullOrWhiteSpace(Remitente) || !string.IsNullOrWhiteSpace(Usuario);
 }
 
 public interface IEnviadorCorreo
@@ -68,6 +85,52 @@ public class SmtpEnviador(IOptions<CorreoOptions> options, ILogger<SmtpEnviador>
             await smtp.DisconnectAsync(true, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
+        {
+            logger.LogError(e, "No se pudo enviar el correo \"{Asunto}\" a {Para}", asunto, para);
+            throw new CorreoException("No se pudo enviar el correo. Inténtalo de nuevo más tarde.", e);
+        }
+    }
+}
+
+/// <summary>Emails through Brevo's transactional API (HTTPS, so it works where SMTP ports are blocked).</summary>
+public class BrevoEnviador(IOptions<CorreoOptions> options, ILogger<BrevoEnviador> logger) : IEnviadorCorreo
+{
+    private static readonly HttpClient Http = new()
+    {
+        BaseAddress = new Uri("https://api.brevo.com/v3/"),
+        Timeout = TimeSpan.FromSeconds(30),
+    };
+
+    private readonly CorreoOptions _opciones = options.Value;
+
+    public bool Configurado => _opciones.Configurado;
+
+    public async Task EnviarAsync(string para, string asunto, string html, CancellationToken ct = default)
+    {
+        if (!Configurado)
+            throw new CorreoException("El envío de correos no está configurado");
+
+        using var pedido = new HttpRequestMessage(HttpMethod.Post, "smtp/email")
+        {
+            Content = JsonContent.Create(
+                new
+                {
+                    sender = new { name = _opciones.NombreRemitente, email = _opciones.Remitente },
+                    to = new[] { new { email = para } },
+                    subject = asunto,
+                    htmlContent = html,
+                }
+            ),
+        };
+        pedido.Headers.Add("api-key", _opciones.BrevoApiKey);
+
+        try
+        {
+            using var r = await Http.SendAsync(pedido, ct);
+            if (!r.IsSuccessStatusCode)
+                throw new HttpRequestException($"Brevo respondió {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync(ct)}");
+        }
+        catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             logger.LogError(e, "No se pudo enviar el correo \"{Asunto}\" a {Para}", asunto, para);
             throw new CorreoException("No se pudo enviar el correo. Inténtalo de nuevo más tarde.", e);
