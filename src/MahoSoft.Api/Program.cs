@@ -48,3 +48,6 @@ app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();
+
+// Lets the tests start the API (WebApplicationFactory<Program>)
+public partial class Program;

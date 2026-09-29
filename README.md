@@ -95,6 +95,16 @@ Para cambiar el modelo:
 dotnet ef migrations add NombreDelCambio --project src/MahoSoft.Datos --startup-project src/MahoSoft.Api --output-dir Migrations
 ```
 
+## Pruebas automáticas
+
+`tests/MahoSoft.Pruebas` levanta la API completa en memoria contra una base propia, `MahoSoft_Pruebas`, que se borra y se crea con los datos de ejemplo en cada corrida (la base de desarrollo no se toca). Necesita el mismo SQL Server local y la clave `Jwt:Key` en user-secrets.
+
+```bash
+dotnet test
+```
+
+Cubren lo que no se puede romper: totales, costo y stock de las compras; precio, descuento y stock de las ventas; que compras y ventas simultáneas no pierdan ni vendan de más; anulaciones; ajustes de inventario; que el stock de cada talla sea la suma de sus movimientos; y qué puede hacer cada rol.
+
 ## Autenticación
 
 - `POST /api/auth/login` `{ email, password }` → token JWT + usuario (nombre, rol, permisos). Máximo 5 intentos por minuto por dirección.
