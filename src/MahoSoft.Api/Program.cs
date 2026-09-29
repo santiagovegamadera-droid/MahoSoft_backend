@@ -3,6 +3,9 @@ using MahoSoft.Api.Auth;
 using MahoSoft.Api.Errores;
 using MahoSoft.Negocio;
 
+// PDF reports: QuestPDF's free Community license (businesses under USD 1M yearly revenue)
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddNegocio(builder.Configuration);

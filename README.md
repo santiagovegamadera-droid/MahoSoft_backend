@@ -107,6 +107,16 @@ Las listas se guardan como el usuario las ve. Lo que sale de la lista se borra, 
 - Una talla que ya usan productos, compras, ventas o movimientos de inventario **no se puede quitar** (409). Una talla puede cambiar de grupo sin perder su stock.
 - Los descuentos del POS se borran sin más: cada venta guarda su propio porcentaje.
 
+## Inicio y reportes
+
+Se calculan desde las ventas registradas (las anuladas no cuentan), en hora de Colombia. El ingreso de cada línea es su precio por cantidad menos su parte del descuento de la venta, así que categorías y productos suman lo vendido sin el envío.
+
+- `GET /api/tablero` (permiso `Dashboard`) → ventas y transacciones de hoy, ayer, el mes y el mes anterior hasta el mismo día; ingresos de los últimos 6 meses; ventas por categoría y los 5 productos más vendidos del mes (con su stock); y las tallas de productos activos con stock en o bajo `StockBajoTalla` (las 8 más urgentes y el total).
+- `GET /api/reportes?desde=2026-09-01&hasta=2026-09-30` (permiso `Reportes`, fechas incluidas, hasta dos años) → totales (vendido, transacciones, prendas, ticket promedio, ingresos, costo y margen bruto) contra el periodo anterior de igual duración, la serie por día (o por mes si pasa de dos meses), los 10 productos más vendidos, y las ventas por categoría y por medio de pago.
+- `GET /api/reportes/excel?desde=…&hasta=…` y `GET /api/reportes/pdf?desde=…&hasta=…` → el mismo reporte como archivo.
+
+El Excel se genera con ClosedXML y el PDF con QuestPDF, con la licencia Community (gratuita para negocios que facturan menos de 1 millón de dólares al año; se declara en `Program.cs`).
+
 ## Usuarios y perfil
 
 Usuarios, con permiso `Usuarios`:
