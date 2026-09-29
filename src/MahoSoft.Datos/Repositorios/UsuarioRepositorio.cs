@@ -22,6 +22,9 @@ public interface IUsuarioRepositorio
     /// </summary>
     Task<int> ContarAdministradoresAsync(int excluirId, CancellationToken ct = default);
 
+    /// <summary>The user holding that password-reset code (by its hash), tracked for changes; or null.</summary>
+    Task<Usuario?> ObtenerPorResetTokenAsync(string hash, CancellationToken ct = default);
+
     void Agregar(Usuario usuario);
 }
 
@@ -49,6 +52,9 @@ public class UsuarioRepositorio(AppDbContext db) : IUsuarioRepositorio
             u => u.Id != excluirId && u.Activo && u.Permisos.Any(p => p.Permiso == Permiso.Usuarios),
             ct
         );
+
+    public Task<Usuario?> ObtenerPorResetTokenAsync(string hash, CancellationToken ct = default) =>
+        db.Usuarios.SingleOrDefaultAsync(u => u.ResetTokenHash == hash, ct);
 
     public void Agregar(Usuario usuario) => db.Usuarios.Add(usuario);
 }

@@ -24,6 +24,26 @@ public class AuthController(IAuthServicio auth, TokenService tokens) : Controlle
         return usuario is null ? Unauthorized() : usuario;
     }
 
+    /// <summary>Emails a link to set a new password; answers 204 whether or not the email exists.</summary>
+    [HttpPost("recuperar-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimits.Login)]
+    public async Task<IActionResult> RecuperarPassword(RecuperarPasswordRequest req, CancellationToken ct)
+    {
+        await auth.RecuperarPasswordAsync(req, ct);
+        return NoContent();
+    }
+
+    /// <summary>Sets a new password with the code from that link.</summary>
+    [HttpPost("restablecer-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimits.Login)]
+    public async Task<IActionResult> RestablecerPassword(RestablecerPasswordRequest req, CancellationToken ct)
+    {
+        await auth.RestablecerPasswordAsync(req, ct);
+        return NoContent();
+    }
+
     [HttpPost("cambiar-password")]
     public async Task<IActionResult> CambiarPassword(CambiarPasswordRequest req, CancellationToken ct)
     {

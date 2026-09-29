@@ -22,6 +22,7 @@ public class NegocioExceptionFilter(ProblemDetailsFactory problemDetails) : IExc
             AccesoDenegadoException => StatusCodes.Status403Forbidden,
             NoEncontradoException => StatusCodes.Status404NotFound,
             ConflictoException => StatusCodes.Status409Conflict,
+            ServicioNoDisponibleException => StatusCodes.Status503ServiceUnavailable,
             _ => StatusCodes.Status400BadRequest,
         };
         ctx.Result = new ObjectResult(problemDetails.CreateProblemDetails(ctx.HttpContext, status, detail: e.Message))

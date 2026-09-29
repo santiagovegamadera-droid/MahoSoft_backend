@@ -1,4 +1,5 @@
 using MahoSoft.Datos.Archivos;
+using MahoSoft.Datos.Correo;
 using MahoSoft.Datos.Repositorios;
 using MahoSoft.Datos.Seed;
 using MahoSoft.Entidades;
@@ -39,6 +40,9 @@ public static class DatosSetup
 
         services.AddOptions<ArchivosOptions>().Bind(config.GetSection(ArchivosOptions.Seccion));
         services.AddSingleton<IAlmacenDocumentos, DiscoAlmacen>();
+
+        services.AddOptions<CorreoOptions>().Bind(config.GetSection(CorreoOptions.Seccion));
+        services.AddSingleton<IEnviadorCorreo, SmtpEnviador>();
 
         return services;
     }

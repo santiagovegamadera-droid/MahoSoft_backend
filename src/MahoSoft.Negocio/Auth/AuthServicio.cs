@@ -1,6 +1,11 @@
+using System.Security.Cryptography;
+using System.Text;
+using MahoSoft.Datos.Correo;
 using MahoSoft.Datos.Repositorios;
 using MahoSoft.Entidades;
+using MahoSoft.Negocio.Correo;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 
 namespace MahoSoft.Negocio.Auth;
 
@@ -13,11 +18,28 @@ public interface IAuthServicio
     Task<UsuarioSesion?> ObtenerSesionActivaAsync(int usuarioId, CancellationToken ct = default);
 
     Task CambiarPasswordAsync(int usuarioId, CambiarPasswordRequest req, CancellationToken ct = default);
+
+    /// <summary>
+    /// Emails a link to set a new password. Answers the same whether the email exists or not, so it can't be used to
+    /// find out who has an account.
+    /// </summary>
+    Task RecuperarPasswordAsync(RecuperarPasswordRequest req, CancellationToken ct = default);
+
+    /// <summary>Sets a new password with the code from the emailed link (valid once, for 1 hour).</summary>
+    Task RestablecerPasswordAsync(RestablecerPasswordRequest req, CancellationToken ct = default);
 }
 
-public class AuthServicio(IUsuarioRepositorio usuarios, IUnidadDeTrabajo unidad, IPasswordHasher<Usuario> hasher)
-    : IAuthServicio
+public class AuthServicio(
+    IUsuarioRepositorio usuarios,
+    IConfiguracionRepositorio config,
+    IUnidadDeTrabajo unidad,
+    IPasswordHasher<Usuario> hasher,
+    IEnviadorCorreo correo,
+    IOptions<AppOptions> app
+) : IAuthServicio
 {
+    private static readonly TimeSpan VigenciaCodigo = TimeSpan.FromHours(1);
+
     private const string CredencialesInvalidas = "Correo o contraseña incorrectos";
 
     public async Task<UsuarioSesion> LoginAsync(LoginRequest req, CancellationToken ct = default)
@@ -58,4 +80,49 @@ public class AuthServicio(IUsuarioRepositorio usuarios, IUnidadDeTrabajo unidad,
         usuario.PasswordHash = hasher.HashPassword(usuario, req.Nueva);
         await unidad.GuardarCambiosAsync(ct);
     }
+
+    public async Task RecuperarPasswordAsync(RecuperarPasswordRequest req, CancellationToken ct = default)
+    {
+        if (!correo.Configurado)
+            throw new ServicioNoDisponibleException(
+                "La recuperación por correo todavía no está configurada. Pídele a la administradora que te asigne una contraseña."
+            );
+
+        var usuario = await usuarios.ObtenerPorEmailAsync(req.Email.Trim(), ct);
+        if (usuario is null || !usuario.Activo)
+            return;
+
+        // 32 random bytes as the code; only its hash is stored, so a copy of the database can't be used to reset
+        var codigo = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+        usuario.ResetTokenHash = Hash(codigo);
+        usuario.ResetTokenExpira = DateTimeOffset.UtcNow.Add(VigenciaCodigo);
+        await unidad.GuardarCambiosAsync(ct);
+
+        var negocio = (await config.ObtenerNegocioAsync(ct)).Nombre;
+        var enlace = $"{app.Value.UrlFrontend.TrimEnd('/')}/?restablecer={codigo}";
+        await CorreoServicio.Enviar(
+            () =>
+                correo.EnviarAsync(
+                    usuario.Email,
+                    $"Cambia tu contraseña de {negocio}",
+                    PlantillasCorreo.RecuperarPassword(negocio, usuario.Nombre, enlace),
+                    ct
+                )
+        );
+    }
+
+    public async Task RestablecerPasswordAsync(RestablecerPasswordRequest req, CancellationToken ct = default)
+    {
+        var usuario = await usuarios.ObtenerPorResetTokenAsync(Hash(req.Codigo.Trim()), ct);
+        if (usuario is null || usuario.ResetTokenExpira < DateTimeOffset.UtcNow || !usuario.Activo)
+            throw new ValidacionException("El enlace no es válido o ya venció. Pide uno nuevo.");
+
+        usuario.PasswordHash = hasher.HashPassword(usuario, req.Nueva);
+        usuario.ResetTokenHash = null;
+        usuario.ResetTokenExpira = null;
+        await unidad.GuardarCambiosAsync(ct);
+    }
+
+    private static string Hash(string codigo) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(codigo))).ToLowerInvariant();
 }

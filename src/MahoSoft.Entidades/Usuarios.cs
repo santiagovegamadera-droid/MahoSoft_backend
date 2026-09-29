@@ -13,6 +13,12 @@ public class Usuario
     public string? Documento { get; set; }
     public bool Activo { get; set; } = true;
     public DateTimeOffset? UltimoAcceso { get; set; }
+
+    /// <summary>SHA-256 of the password-reset code sent by email (the code itself is never stored), or null.</summary>
+    public string? ResetTokenHash { get; set; }
+
+    /// <summary>When the reset code stops working.</summary>
+    public DateTimeOffset? ResetTokenExpira { get; set; }
     public DateTimeOffset CreadoEn { get; set; }
     public List<UsuarioPermiso> Permisos { get; set; } = [];
 }

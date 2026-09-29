@@ -2,6 +2,7 @@ using System.Text.Json;
 using MahoSoft.Api.Auth;
 using MahoSoft.Entidades;
 using MahoSoft.Negocio;
+using MahoSoft.Negocio.Correo;
 using MahoSoft.Negocio.Ventas;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -48,6 +49,14 @@ public class VentasController(IVentaServicio ventas, IOptions<JsonOptions> json)
         return CreatedAtAction(nameof(Obtener), new { id = venta.Id }, venta);
     }
 
+    /// <summary>Emails the sale's receipt to the customer.</summary>
+    [HttpPost("{id:int}/enviar")]
+    public async Task<IActionResult> Enviar(int id, EnviarFacturaRequest req, [FromServices] ICorreoServicio correo, CancellationToken ct)
+    {
+        await correo.EnviarFacturaAsync(id, req.Correo, ct);
+        return NoContent();
+    }
+
     [HttpPost("{id:int}/anular")]
     public Task<VentaDto> Anular(int id, AnularVentaRequest req, CancellationToken ct) =>
         ventas.AnularAsync(id, req, User.UsuarioId(), ct);
@@ -65,6 +74,8 @@ public class VentasController(IVentaServicio ventas, IOptions<JsonOptions> json)
         return File(doc.Contenido, doc.TipoMime);
     }
 }
+
+public record EnviarFacturaRequest(string Correo);
 
 /// <summary>Customers the POS can pick instead of typing their details again.</summary>
 [ApiController]

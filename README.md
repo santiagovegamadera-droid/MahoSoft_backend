@@ -74,6 +74,15 @@ dotnet tool restore
 dotnet run --project src/MahoSoft.Api --launch-profile http
 ```
 
+Para enviar correos (factura al cliente y recuperar la contraseña), la cuenta de Gmail de la tienda con una [contraseña de aplicación](https://myaccount.google.com/apppasswords) (requiere verificación en 2 pasos). Sin esto, esas dos funciones responden 503 "todavía no está configurado":
+
+```bash
+dotnet user-secrets set "Correo:Usuario" "<correo>@gmail.com" --project src/MahoSoft.Api
+dotnet user-secrets set "Correo:Password" "<contraseña de aplicación>" --project src/MahoSoft.Api
+```
+
+`App:UrlFrontend` es la dirección del frontend que va en el enlace para recuperar la contraseña.
+
 Las facturas de proveedores se guardan en el disco, en `Archivos:Carpeta` (`App_Data/archivos` dentro de la API por defecto; está en `.gitignore`).
 
 La API queda en `http://localhost:5241`. El frontend (`http://localhost:8443`) está permitido en `Cors:Origenes`.
@@ -91,6 +100,10 @@ dotnet ef migrations add NombreDelCambio --project src/MahoSoft.Datos --startup-
 - `POST /api/auth/login` `{ email, password }` → token JWT + usuario (nombre, rol, permisos). Máximo 5 intentos por minuto por dirección.
 - `GET /api/auth/me` → el usuario conectado, con sus permisos actuales.
 - `POST /api/auth/cambiar-password` `{ actual, nueva }`.
+- `POST /api/auth/recuperar-password` `{ email }` → 204 exista o no el correo (así no se puede averiguar quién tiene cuenta). Si existe y está activo, envía un enlace `{App:UrlFrontend}/?restablecer=<código>` que vence en 1 hora. Solo se guarda el hash SHA-256 del código.
+- `POST /api/auth/restablecer-password` `{ codigo, nueva }` → 204; 400 si el código no existe, venció o ya se usó.
+
+Login, recuperar y restablecer comparten el límite de 5 intentos por minuto por dirección.
 
 Todas las rutas exigen sesión salvo las marcadas con `[AllowAnonymous]`. Para exigir un permiso: `[Authorize(Policy = nameof(Permiso.Compras))]`. En cada petición el usuario se vuelve a leer de la base de datos, así que desactivarlo o cambiarle permisos aplica de inmediato. La sesión dura 12 horas (`Jwt:ExpiraHoras`).
 
@@ -154,6 +167,7 @@ Todo con permiso `POS`.
 - `GET /api/ventas/{id}`.
 - `POST /api/ventas` (multipart): `datos` = JSON `{ tipo, metodoPago, descuentoPorcentaje, cliente: { nombre, tipoDocumento, documento, telefono, correo } | null, entrega: { direccion, barrio, ciudad, fechaEntrega, envio, notas } | null, comprobante: { banco, referencia } | null, items: [{ productoId, talla, cantidad }] }` y `comprobante` = foto o PDF de la transferencia (opcional, mismas reglas que las facturas de compra). → 201.
 - `POST /api/ventas/{id}/anular` `{ motivo }`.
+- `POST /api/ventas/{id}/enviar` `{ correo }` → envía el comprobante por correo (503 si el correo no está configurado).
 - `GET /api/ventas/{id}/comprobante` → el comprobante de la transferencia.
 - `GET /api/clientes?q=` → hasta 8 clientes cuyo documento, teléfono o nombre contiene el texto (mínimo 3 caracteres).
 

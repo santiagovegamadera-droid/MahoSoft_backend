@@ -82,6 +82,8 @@ public class UsuarioConfig : IEntityTypeConfiguration<Usuario>
         e.Property(x => x.PasswordHash).HasMaxLength(500);
         e.Property(x => x.Telefono).HasMaxLength(30);
         e.Property(x => x.Documento).HasMaxLength(30);
+        e.Property(x => x.ResetTokenHash).HasMaxLength(64);
+        e.HasIndex(x => x.ResetTokenHash).HasFilter("[ResetTokenHash] IS NOT NULL");
         e.HasMany(x => x.Permisos).WithOne().HasForeignKey(p => p.UsuarioId);
     }
 }

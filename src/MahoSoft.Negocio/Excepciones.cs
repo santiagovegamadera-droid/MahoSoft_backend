@@ -20,3 +20,6 @@ public class NoEncontradoException(string mensaje) : NegocioException(mensaje);
 
 /// <summary>Clashes with data already stored, e.g. deleting a category that has products (409).</summary>
 public class ConflictoException(string mensaje) : NegocioException(mensaje);
+
+/// <summary>An outside service (e.g. email) isn't set up or didn't answer (503).</summary>
+public class ServicioNoDisponibleException(string mensaje) : NegocioException(mensaje);
