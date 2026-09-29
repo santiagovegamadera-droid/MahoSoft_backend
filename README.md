@@ -83,13 +83,13 @@ Para enviar correos (factura al cliente y recuperar la contraseña) hay dos opci
 
   ```bash
   dotnet user-secrets set "Correo:BrevoApiKey" "xkeysib-…" --project src/MahoSoft.Api
-  dotnet user-secrets set "Correo:Remitente" "<correo de la tienda>" --project src/MahoSoft.Api
+  dotnet user-secrets set "Correo:Remitente" "mahoboutique996@gmail.com" --project src/MahoSoft.Api
   ```
 
 - **Gmail por SMTP**: la cuenta con una [contraseña de aplicación](https://myaccount.google.com/apppasswords) (requiere verificación en 2 pasos).
 
   ```bash
-  dotnet user-secrets set "Correo:Usuario" "<correo>@gmail.com" --project src/MahoSoft.Api
+  dotnet user-secrets set "Correo:Usuario" "mahoboutique996@gmail.com" --project src/MahoSoft.Api
   dotnet user-secrets set "Correo:Password" "<contraseña de aplicación>" --project src/MahoSoft.Api
   ```
 
@@ -143,7 +143,7 @@ Las tablas las crea la API al arrancar; no hay que ejecutar nada en el editor SQ
 | `Inicial__AdminEmail`, `Inicial__AdminPassword`, `Inicial__AdminNombre` | solo el primer arranque | El administrador (contraseña de al menos 12 caracteres). Quitarlas después |
 | `Inicial__NombreNegocio` | no | Nombre del negocio al crear la base (se cambia luego en Configuración) |
 | `Cloudinary__CloudName`, `Cloudinary__ApiKey`, `Cloudinary__ApiSecret` | para subir fotos | Sin ellas todo funciona, pero subir fotos responde "no está configurado" |
-| `Correo__BrevoApiKey`, `Correo__Remitente` | para enviar correos | Clave de Brevo y el correo verificado en Brevo; sin ellas no salen facturas por correo ni enlaces de contraseña. Render gratis bloquea SMTP, así que Gmail directo no funciona ahí |
+| `Correo__BrevoApiKey`, `Correo__Remitente` | para enviar correos | Clave de Brevo y el remitente verificado en Brevo: `mahoboutique996@gmail.com`. Sin ellas no salen facturas por correo ni enlaces de contraseña. Render gratis bloquea SMTP, así que Gmail directo no funciona ahí |
 
 El `Dockerfile` ya fija el puerto (10000), instala las fuentes que necesitan los PDF y el Excel, y activa `ASPNETCORE_FORWARDEDHEADERS_ENABLED`, porque Render termina HTTPS en su proxy.
 
