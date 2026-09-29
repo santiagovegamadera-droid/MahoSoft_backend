@@ -107,6 +107,30 @@ Las listas se guardan como el usuario las ve. Lo que sale de la lista se borra, 
 - Una talla que ya usan productos, compras, ventas o movimientos de inventario **no se puede quitar** (409). Una talla puede cambiar de grupo sin perder su stock.
 - Los descuentos del POS se borran sin más: cada venta guarda su propio porcentaje.
 
+## Ventas
+
+Todo con permiso `POS`.
+
+- `GET /api/ventas` → las ventas, la más reciente primero, **incluidas las anuladas**: `{ id, numeroFactura, fecha, tipo: "Tienda" | "Pedido", cliente: { id, nombre, tipoDocumento, documento, telefono, correo }, vendedorId, vendedor, metodoPago: "Efectivo" | "Tarjeta" | "Transferencia", descuentoPorcentaje, subtotal, descuento, envio, total, estado: "Registrada" | "Anulada", anuladaEn, anuladaPor, motivoAnulacion, entrega: { direccion, barrio, ciudad, fechaEntrega, notas }, comprobante: { banco, referencia, archivo }, unidades, items: [{ productoId, producto, talla, cantidad, precioUnitario }] }`.
+- `GET /api/ventas/{id}`.
+- `POST /api/ventas` (multipart): `datos` = JSON `{ tipo, metodoPago, descuentoPorcentaje, cliente: { nombre, tipoDocumento, documento, telefono, correo } | null, entrega: { direccion, barrio, ciudad, fechaEntrega, envio, notas } | null, comprobante: { banco, referencia } | null, items: [{ productoId, talla, cantidad }] }` y `comprobante` = foto o PDF de la transferencia (opcional, mismas reglas que las facturas de compra). → 201.
+- `POST /api/ventas/{id}/anular` `{ motivo }`.
+- `GET /api/ventas/{id}/comprobante` → el comprobante de la transferencia.
+- `GET /api/clientes?q=` → hasta 8 clientes cuyo documento, teléfono o nombre contiene el texto (mínimo 3 caracteres).
+
+Al registrar, en una sola transacción:
+
+- Factura `VTA-{año}-NNNN`, consecutiva y sin repetirse aunque dos cajas vendan a la vez.
+- **El precio y el costo salen del producto**, no de la petición; el costo del momento queda guardado en la venta. El descuento debe ser 0 o uno de los descuentos del POS en Configuración.
+- El stock se descuenta **en la base de datos** (`Stock = Stock - n` solo si alcanza). Si dos cajas venden la última unidad a la vez, una recibe 409 "Solo quedan 0 unidades…". Cada línea queda como movimiento de **salida**.
+- Un **pedido** necesita nombre y teléfono del cliente y la dirección de entrega; el envío se suma al total.
+- El **cliente** se busca por documento y, si no, por teléfono; se actualiza con lo escrito o se crea. Sin datos es "Cliente general".
+- El producto debe estar activo y venir en esa talla.
+
+**Anular** pide motivo, guarda quién y cuándo, y devuelve las unidades con un movimiento de **entrada**. La venta no se borra: queda con estado `Anulada`.
+
+El stock de compras y de los ajustes de Productos también se suma en la base de datos, así que ventas, compras y ajustes simultáneos nunca pisan el stock, y la suma de los movimientos de cada talla siempre es igual a su stock.
+
 ## Compras
 
 Todo con permiso `Compras`.
