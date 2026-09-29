@@ -6,6 +6,7 @@ using MahoSoft.Negocio.Compras;
 using MahoSoft.Negocio.Configuracion;
 using MahoSoft.Negocio.Productos;
 using MahoSoft.Negocio.Proveedores;
+using MahoSoft.Negocio.Usuarios;
 using MahoSoft.Negocio.Ventas;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
@@ -28,6 +29,7 @@ public static class NegocioSetup
         services.AddScoped<IProductoServicio, ProductoServicio>();
         services.AddScoped<ICompraServicio, CompraServicio>();
         services.AddScoped<IVentaServicio, VentaServicio>();
+        services.AddScoped<IUsuarioServicio, UsuarioServicio>();
 
         return services;
     }

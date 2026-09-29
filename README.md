@@ -107,6 +107,23 @@ Las listas se guardan como el usuario las ve. Lo que sale de la lista se borra, 
 - Una talla que ya usan productos, compras, ventas o movimientos de inventario **no se puede quitar** (409). Una talla puede cambiar de grupo sin perder su stock.
 - Los descuentos del POS se borran sin más: cada venta guarda su propio porcentaje.
 
+## Usuarios y perfil
+
+Usuarios, con permiso `Usuarios`:
+
+- `GET /api/usuarios` → `[{ id, nombre, email, rol, telefono, tipoDocumento, documento, activo, ultimoAcceso, creadoEn, permisos }]`, por nombre. Nunca incluye la contraseña.
+- `POST /api/usuarios` `{ nombre, email, rol, telefono, tipoDocumento, documento, permisos, activo, password }` → 201. La contraseña inicial es obligatoria (mínimo 8 caracteres).
+- `PUT /api/usuarios/{id}` (los mismos campos, sin `password`); también activa o desactiva.
+- `POST /api/usuarios/{id}/password` `{ nueva }` → restablece la contraseña.
+
+Reglas: el email no se repite (409) y se guarda en minúsculas. Los usuarios no se borran, se desactivan (un desactivado no puede iniciar sesión y su sesión abierta deja de servir). Nadie puede desactivarse ni quitarse el permiso `Usuarios` a sí mismo, y siempre debe quedar al menos un usuario activo con ese permiso.
+
+Perfil, para cualquier usuario con sesión:
+
+- `GET /api/perfil` → los datos propios, con la misma forma que un usuario.
+- `PUT /api/perfil` `{ nombre, email, telefono, tipoDocumento, documento }`. El rol y los permisos solo los cambia quien tiene el permiso `Usuarios`.
+- La contraseña propia se cambia con `POST /api/auth/cambiar-password` `{ actual, nueva }`.
+
 ## Ventas
 
 Todo con permiso `POS`.
